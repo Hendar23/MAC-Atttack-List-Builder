@@ -373,7 +373,7 @@
             for (const [key, count] of Object.entries(counts)) {
                 const limit = (key === 'V-Drill') ? 2 : maxDupes; 
                 if (count > limit) {
-                    errors.push(`Max ${limit} "${key}" allowed (Has ${count}).`);
+                    errors.push(`Max ${limit} ${key} allowed (Has ${count}).`);
                 }
             }
 
