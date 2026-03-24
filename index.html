@@ -1,0 +1,1532 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Grill - MAC Attack List Builder</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.development.js"></script>
+    <script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.development.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
+    <style>
+        @media print {
+            .no-print { display: none !important; }
+            .print-only { display: block !important; }
+            body { background-color: white; color: black; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            .break-inside-avoid { break-inside: avoid; }
+            @page { margin: 0.5cm; }
+        }
+    </style>
+</head>
+<body class="bg-slate-100 text-slate-800 font-sans">
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+
+        // --- Style Constants ---
+        const BTN_TOOL_CLASS = "bg-white text-slate-600 p-3 rounded-full hover:bg-slate-50 border border-slate-200 shadow-sm transition-transform hover:scale-105 flex items-center justify-center";
+        const BTN_FOOTER_CLASS = "p-2 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-slate-500";
+
+        // --- Icons ---
+        const IconTrash = () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>;
+        const IconPlus = ({ size = 24 }) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>;
+        const IconPrinter = () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>;
+        const IconAlert = () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>;
+        const IconInfo = () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>;
+        const IconCopy = () => <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>;
+        const IconCamera = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>;
+        const IconSave = ({ size = 20 }) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>;
+        const IconLoad = ({ size = 20 }) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>;
+        const IconClipboard = () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg>;
+        const IconClone = () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="13" height="13" x="9" y="9" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>;
+        const IconCards = () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="2" width="20" height="20" rx="2" /><path d="M8 2v20" /><path d="M16 2v20" /></svg>;
+        const IconHelp = () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg>;
+        const IconClose = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>;
+        const IconArrowUp = () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m18 15-6-6-6 6"/></svg>;
+        const IconArrowDown = () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>;
+
+        // --- Game Data & Rules ---
+
+        const FACTIONS = [
+            { id: 'NONE', name: 'No Faction', ruleName: '', rule: '', module: null },
+            { id: 'ELDER', name: 'Elder Circle', ruleName: 'Shock Dispersion', rule: 'Module damaged = -1 Heat. Module destroyed = +1 Heat.', module: 'Rampart' },
+            { id: 'FORGE', name: 'Grand Forge', ruleName: 'Hammer Forged', rule: 'All brawl attacks by/against you are +1 AD.', module: 'Extinguisher' },
+            { id: 'FIRST', name: 'First Regiment', ruleName: 'O-Mods', rule: 'MACs take extra hardware in Slot 0. Destroying standard module hits Slot 0.', module: 'Seeker' },
+            { id: 'ARKSWORN', name: 'Arksworn Order', ruleName: 'Triple Hull', rule: 'Treat Class as +1 for Heat, Collisions & Internal Dmg.', module: 'Spire' },
+            { id: 'TORCH', name: 'Torchbearer Archive', ruleName: 'Adaptive Architecture', rule: 'Module destroyed = Main Gun Power +1.', module: 'Mindhive' },
+            { id: 'DYNAPOLIS', name: 'Dynapolis', ruleName: 'Temporal Overclocking', rule: '1/turn reroll any attack dice. 1-3 on reroll = 1 Heat.', module: 'Halo' },
+            { id: 'VOX', name: 'Vox Stellari', ruleName: 'Harmonic Ratios', rule: 'If Wpn Pwr == Round #, double Power.', module: 'Converter' },
+            { id: 'GENESIS', name: 'New Genesis', ruleName: 'BioFusion', rule: 'Move start: Rotate, 3", Rotate. Module destroyed = Extra Hit.', module: 'Spine' },
+            { id: 'SKYLESS', name: 'Skyless Cartel', ruleName: 'Umber Fields', rule: 'Attack causes 0 hits? Motion +1.', module: 'V-Drill' },
+            { id: 'MONOLITH', name: 'Monolith Conclave', ruleName: 'Final Act', rule: 'Destroyed = Hits equal to class to all w/in d6".', module: 'Crucible' },
+        ];
+
+        const PERKS = [
+            { name: 'Agile', rule: 'Rotate at end of Rush.' },
+            { name: 'Airy', rule: 'Roll 5-6 on cool = lose extra Heat.' },
+            { name: 'Aware', rule: 'Front facing is 270°.' },
+            { name: 'Bruiser', rule: 'Brawls vs you are -1AD.' },
+            { name: 'Cool', rule: 'End meltdown on 1 Heat = lose 1 Heat.' },
+            { name: 'Focused', rule: '-1TN vs Motion 2 or less.' },
+            { name: 'Intimidating', rule: '+1TN vs you within 6".' },
+            { name: 'Keen', rule: '-1TN vs Motion 3 or higher.' },
+            { name: 'Marathon', rule: 'Gain 1 less Heat when Rushing.' },
+            { name: 'Momentum', rule: 'Start move: Move 3" (0 Heat).' },
+            { name: 'Pragmatic', rule: 'Module destroyed = -1 Heat.' },
+            { name: 'Protective', rule: 'Reroll hit location to Main Gun.' },
+            { name: 'Redline', rule: 'Hit exactly Heat 6? -1 Heat.' },
+            { name: 'Sprinter', rule: 'Rush up to 15".' },
+            { name: 'Stealthy', rule: 'Deploy: Move 6" (0 Heat).' },
+            { name: 'Strider', rule: 'Shift up to 9".' },
+            { name: 'Sturdy', rule: 'Attacks to Front +1TN.' },
+            { name: 'Survivor', rule: 'Meltdown death? Roll 5+ to live.' },
+            { name: 'Wild', rule: 'Start attack: Roll 6 to cool all.' },
+        ];
+
+        const FLAWS = [
+            { name: 'Awkward', rule: '+1 Heat when Shifting.' },
+            { name: 'Blinkered', rule: 'Front facing is 90°.' },
+            { name: 'Brittle', rule: 'Crash = Class hits.' },
+            { name: 'Buggy', rule: 'Start move: Roll 1 = Skip move.' },
+            { name: 'Capped', rule: 'Rush max 9".' },
+            { name: 'Combustible', rule: 'Overheat = Internal Dmg.' },
+            { name: 'Cumbersome', rule: 'No rotate after Shift.' },
+            { name: 'Deadmeat', rule: 'Attacks vs you -1TN.' },
+            { name: 'Deathtrap', rule: 'Main Gun dead = 1 Internal.' },
+            { name: 'Explosive', rule: 'Die immediately on max Internal.' },
+            { name: 'Exposed', rule: 'Main Gun destroyed in 1 hit.' },
+            { name: 'Frail', rule: 'Brawls vs you are x2 AD.' },
+            { name: 'Frontloaded', rule: 'Hits to Rear = +1 Hit.' },
+            { name: 'Jamming', rule: 'Start attack: Roll 1 = Skip.' },
+            { name: 'Lag', rule: '+1TN vs Motion 3 or higher.' },
+            { name: 'Locked', rule: 'No rotate before Rush.' },
+            { name: 'Recoil', rule: '+1TN with Main Gun.' },
+            { name: 'Stiff', rule: '+1 Heat when Rushing.' },
+            { name: 'Stuffy', rule: 'Roll 1-2 on cool = Fail to cool.' },
+            { name: 'Sway', rule: 'Test crash on 2 hits.' },
+            { name: 'Toasty', rule: 'Min Heat is 1.' },
+            { name: 'Twitchy', rule: '+1TN vs Motion 2 or less.' },
+        ];
+
+        const PILOT_TRICKS = [
+            { name: 'Bullrush', rule: 'Move +3" if you collide.' },
+            { name: 'Cruise', rule: 'End move on 1 Heat? Lose it.' },
+            { name: 'Decoy', rule: 'End move: Rotate nearest foe.' },
+            { name: 'Hunker', rule: 'Hold: Set Motion to any.' },
+            { name: 'Hustle', rule: 'Move +3" if start/end in cover.' },
+            { name: 'Jink', rule: 'Move through enemies (no crash).' },
+            { name: 'Outmanoeuvre', rule: 'End move: Adjust foe Motion 1.' },
+            { name: 'Stalk', rule: 'End hidden? Move 3" + Rotate.' },
+        ];
+
+        const COMMAND_DRILLS = [
+            { name: 'BlitzFire', rule: 'Rolls of 5 always hit.' },
+            { name: 'DeathCharge', rule: 'Double Class for collisions/brawl.' },
+            { name: 'LockOn', rule: 'If TN 4 or less, -1TN.' },
+            { name: 'NoScope', rule: 'Long weapons have no min range.' },
+            { name: 'OutFlank', rule: 'All moves allow +3" distance.' },
+        ];
+
+        const REMOTE_ASSETS = [
+            { name: 'Precision Strike', cost: 2, rule: 'Target unit suffers d6 hits.' },
+            { name: 'Carpet Bombing', cost: 2, rule: 'Target point. All units within 6" suffer 1 hit.' },
+            { name: 'Interface Hack', cost: 1, rule: 'Target MAC check or be hacked. Hacked = +1 Heat & Adjust Motion 1.' },
+            { name: 'Target Tracker', cost: 1, rule: 'Target check or treat Motion as 1 for rest of round.' },
+            { name: 'Ammunition Drone', cost: 1, rule: 'Restore one depleted X-type weapon.' },
+            { name: 'Shield Drop', cost: 1, rule: 'Mark target. All attacks vs them +1TN this round.' },
+            { name: 'Redeployment Lifter', cost: 2, rule: 'Move allied unit 9" ignoring terrain. Rotate at end.' },
+            { name: 'Disruption Burst', cost: 2, rule: 'Target point. All units within 6" gain 1 Jolt.' },
+            { name: 'Micro Nuke', cost: 3, rule: 'Target point. All units within 6" take 1 hit and 1 Rad.' },
+            { name: 'Gravity Well', cost: 2, rule: 'Target point. All units within 6" moved 3" to center. MACs can check to resist.' },
+            { name: 'Emergency Coolant', cost: 2, rule: 'Target loses d6 Heat.' },
+            { name: 'Total Bombardment', cost: 3, rule: 'All units not in cover/buildings suffer 1 hit.' },
+            { name: 'Smoke Column', cost: 1, rule: 'Increase target Motion to 6.' },
+            { name: 'Temporal Disruptor', cost: 2, rule: 'Shuffle one drawn initiative card back into deck.' },
+            { name: 'Nanite Swarm', cost: 1, rule: 'Target rolls 3d6. Each die repairs that module number.' },
+            { name: 'Seismic Wave', cost: 1, rule: 'Target MAC check or crash.' },
+            { name: 'Thermal Tick', cost: 1, rule: 'Target MAC check or set Heat to 6.' },
+        ];
+
+        const UNIT_TYPES = {
+            MAC1:   { id: 'MAC1', name: 'Class 1 MAC', baseCost: 12, slots: 6, type: 'MAC', maxMain: 2, maxSub: 1, intDmg: 1 },
+            MAC2:   { id: 'MAC2', name: 'Class 2 MAC', baseCost: 16, slots: 6, type: 'MAC', maxMain: 3, maxSub: 2, intDmg: 2 },
+            MAC3:   { id: 'MAC3', name: 'Class 3 MAC', baseCost: 20, slots: 6, type: 'MAC', maxMain: 4, maxSub: 3, intDmg: 3 },
+            INF:    { id: 'INF',  name: 'Infantry Squad', baseCost: 1, slots: 2, type: 'AU', maxMain: 1, maxSub: 1, intDmg: 0 },
+            VEH:    { id: 'VEH',  name: 'Vehicle', baseCost: 1, slots: 2, type: 'AU', maxMain: 2, maxSub: 2, intDmg: 0 },
+            REMOTE: { id: 'REMOTE', name: 'Remote Asset', baseCost: 0, slots: 0, type: 'ASSET', maxMain: 0, maxSub: 0, intDmg: 0 },
+        };
+
+        const WEAPON_RANGES = [
+            { id: 'S', name: 'Short', code: 'S', rule: 'Max 12"' },
+            { id: 'L', name: 'Long', code: 'L', rule: 'Min 6"' },
+            { id: 'A', name: 'Arc', code: 'A', rule: 'Min 12", Indirect Fire' },
+        ];
+
+        const WEAPON_TYPES = [
+            { id: 'B', name: 'Burst', code: 'B', rule: 'Miss = +1 AD' },
+            { id: 'P', name: 'Piercing', code: 'P', rule: 'Hit = +1 AD' },
+            { id: 'G', name: 'Guided', code: 'G', rule: 'TN = Lower Motion x2' },
+            { id: 'M', name: 'Multi', code: 'M', rule: '2nd Atk w/in 6" (0 Heat)' },
+        ];
+
+        const WEAPON_SUBTYPES = [
+            { id: '', name: 'None', code: '', rule: '' },
+            { id: 'X', name: 'Expendable', code: '-X', rule: '+Power AD, 1 Use' },
+            { id: 'T', name: 'Thermal', code: '-T', rule: 'Ignore Cover. Heat vs MACs' },
+            { id: 'J', name: 'Jolt', code: '-J', rule: 'Jolt vs MACs. Move=2 Hits/Jolt' },
+            { id: 'R', name: 'Rad', code: '-R', rule: 'Rad vs MACs. Cool=Hit/Rad' },
+        ];
+
+        const BRAWL_WEAPONS = [
+            { id: 'P2', name: 'P2 (Piercing)', cost: 0, power: 1, rule: '+2AD, Piercing' },
+            { id: 'B2', name: 'B2 (Burst)', cost: 0, power: 1, rule: '+2AD, Burst' },
+            { id: 'G2', name: 'G2 (Guided)', cost: 0, power: 1, rule: '+2AD, Guided' },
+            { id: 'M2', name: 'M2 (Multi)', cost: 0, power: 1, rule: '+2AD, Multi' },
+        ];
+
+        const HARDWARE = [
+            { name: 'Aerodrive', type: ['V'], rule: 'Ignore terrain/collisions. Motion 3.' },
+            { name: 'Amplifier', type: ['M'], rule: '+1 Power before attack.' },
+            { name: 'Armour', type: ['I', 'V'], rule: '5+ ignore hit (3+ if x2).' },
+            { name: 'Booster', type: ['A'], rule: '1/turn gain class Heat to rotate & move 3".' },
+            { name: 'Carrier', type: ['M', 'V'], rule: 'Carry 2 Inf. Deploy on move.' },
+            { name: 'Casing', type: ['M'], rule: 'Internal dmg hits here instead.' },
+            { name: 'Catalyst', type: ['M'], rule: '1st attack -1 Heat.' },
+            { name: 'Cloak', type: ['A'], rule: 'Hold = Motion 6.' },
+            { name: 'Conductor', type: ['A'], rule: 'End move: 1 Heat to visible MAC w/in 3".' },
+            { name: 'Coolant', type: ['M'], rule: 'Cool -2 Heat. Destroy: +2 Heat.' },
+            { name: 'Disruptor', type: ['A'], rule: 'End move: Visible MAC w/in 3" check/crash.' },
+            { name: 'Dozer', type: ['V'], rule: '+2 classes for collisions.' },
+            { name: 'ECM', type: ['M'], rule: 'End attack: +1 Motion.' },
+            { name: 'Emitter', type: ['A'], rule: 'End move: 1 Rad to visible MAC w/in 3".' },
+            { name: 'Frame', type: ['M'], special: 'cost_reduce', rule: '-1 pt Cost.' },
+            { name: 'Graulock', type: ['A'], rule: 'End move: Set Motion 1.' },
+            { name: 'Guardian', type: ['M'], rule: 'Cool -1 Rad & -1 Jolt.' },
+            { name: 'Gyro', type: ['A'], rule: 'Rough/Cover = Open.' },
+            { name: 'Hooks', type: ['I'], rule: 'Move with touching MAC.' },
+            { name: 'Hotstepper', type: ['A'], rule: 'Jump collide = +1 Hit & 1 Heat.' },
+            { name: 'Hoverfoil', type: ['A'], rule: 'Rough/Water = Open.' },
+            { name: 'Intake', type: ['M'], rule: 'Jump = -1 Heat.' },
+            { name: 'Jet', type: ['A'], rule: 'Jump 9"/jet.' },
+            { name: 'Mesh', type: ['M'], rule: '<3 hits? Ignore hits here.' },
+            { name: 'Plate', type: ['M'], rule: '4+ ignore hit here.' },
+            { name: 'Precog', type: ['M'], rule: 'Redraw init card for 1 Heat.' },
+            { name: 'Prism', type: ['M'], rule: 'End attack: -1 Heat per ranged shot.' },
+            { name: 'Radiator', type: ['M'], rule: 'Cool -1 Heat.' },
+            { name: 'Reflector', type: ['M'], rule: '3+ hits? Ignore hits here.' },
+            { name: 'Rotor', type: ['M'], rule: 'Extra rotate during move.' },
+            { name: 'Servo', type: ['M'], rule: 'Shift/Rush = -1 Heat.' },
+            { name: 'Shield', type: ['M'], rule: '1 Heat to ignore hit here.' },
+            { name: 'Tether', type: ['A'], rule: 'End move: 1 Jolt to visible MAC w/in 3".' },
+            { name: 'Transport', type: ['I'], rule: 'Unit can Rush.' },
+            { name: 'Vent', type: ['M'], rule: 'Hold = -2 Heat.' },
+            // Faction Modules
+            { name: 'Rampart', type: ['M'], rule: 'Roll 2+ to ignore each hit if undamaged.' },
+            { name: 'Extinguisher', type: ['M'], rule: 'Cooldown: Take hit here to remove ALL Heat.' },
+            { name: 'Seeker', type: ['M'], rule: 'Gain 1 Heat to give all attacks -1TN.' },
+            { name: 'Spire', type: ['M'], rule: 'S-Range Pwr 1, No Type, Any Facing, 0 Heat.' },
+            { name: 'Mindhive', type: ['A'], rule: 'Activate: Peek init deck. 1 Heat to shuffle.' },
+            { name: 'Halo', type: ['A'], rule: 'Destroy to ignore ALL hits from 1 attack.' },
+            { name: 'Converter', type: ['A'], rule: 'Before attack: Change subtype to Rad or Thermal.' },
+            { name: 'Spine', type: ['A'], rule: 'Collide: +1 Hit dealt, -1 Hit taken.' },
+            { name: 'V-Drill', type: ['A'], rule: '+3AD brawl vs MACs. Rolls of 1 = Self Hit.' },
+            { name: 'Crucible', type: ['M'], rule: 'Cooldown -2 Heat. Hit here = +1 Rad.' },
+        ];
+
+        // --- Card Data ---
+        const SUITS = [
+            { name: 'Spades', symbol: '♠', color: 'text-slate-900', label: 'Black' },
+            { name: 'Clubs', symbol: '♣', color: 'text-slate-900', label: 'Black' },
+            { name: 'Hearts', symbol: '♥', color: 'text-red-600', label: 'Red' },
+            { name: 'Diamonds', symbol: '♦', color: 'text-red-600', label: 'Red' },
+        ];
+        const RANKS = ['A', 'K', 'Q', 'J', '10', '9', '8', '7', '6', '5', '4', '3', '2'];
+
+        // --- Helper Functions ---
+
+        const generateWeaponCode = (w) => {
+            if (!w.range || !w.type || !w.power) return '---';
+            return `${w.isDouble ? '2x ' : ''}${w.range}${w.type}${w.power}${w.subtype || ''}`;
+        };
+
+        const getModuleRule = (mod) => {
+            let parts = [];
+            if (mod.isDouble) parts.push('DOUBLE: Two in one slot (+1pt)');
+            if (mod.category === 'WEAPON') {
+                const r = WEAPON_RANGES.find(x => x.id === mod.range);
+                const t = WEAPON_TYPES.find(x => x.id === mod.type);
+                const s = WEAPON_SUBTYPES.find(x => x.id === mod.subtype);
+                if (r && r.rule) parts.push(r.rule);
+                if (t && t.rule) parts.push(t.rule);
+                if (s && s.rule) parts.push(s.rule);
+            } else if (mod.category === 'BRAWL') {
+                const b = BRAWL_WEAPONS.find(x => x.id === mod.brawlId);
+                if (b) parts.push(b.rule);
+                const s = WEAPON_SUBTYPES.find(x => x.id === mod.subtype);
+                if (s && s.rule) parts.push(s.rule);
+            } else if (mod.category === 'HW') {
+                const h = HARDWARE.find(x => x.name === mod.hwName);
+                if (h) parts.push(h.rule);
+            }
+            return parts.join(' | ');
+        };
+
+        const calculateCost = (unit) => {
+            const typeInfo = UNIT_TYPES[unit.type];
+            if (!typeInfo) return 0;
+
+            if (typeInfo.type === 'ASSET') {
+                const asset = REMOTE_ASSETS.find(a => a.name === unit.assetName);
+                return (asset ? asset.cost : 0) * (unit.count || 1);
+            }
+
+            let cost = typeInfo.baseCost;
+            let hardwareCount = 0;
+            let weaponPowerSum = 0;
+
+            if (unit.modules) {
+                unit.modules.forEach(mod => {
+                    let modCost = 0;
+                    if (mod.category === 'HW') {
+                        hardwareCount++;
+                        if (mod.hwName === 'Frame' && typeInfo.type === 'MAC') {
+                            cost -= 1;
+                        }
+                    } else if (mod.category === 'WEAPON') {
+                        weaponPowerSum += parseInt(mod.power) || 0;
+                    } else if (mod.category === 'BRAWL') {
+                        weaponPowerSum += 1; 
+                    }
+                    
+                    if (mod.isDouble) {
+                        cost += 1; 
+                    }
+                });
+            }
+
+            if (typeInfo.type === 'AU') {
+                cost += hardwareCount + weaponPowerSum;
+            }
+
+            return Math.max(0, cost) * (unit.count || 1);
+        };
+
+        const getFormationLimit = (typeId) => {
+            if (typeId === 'INF') return 5;
+            if (typeId === 'VEH') return 3;
+            if (typeId === 'REMOTE') return 3; // Allowing multiple asset stacks
+            return 1;
+        };
+
+        const checkValidation = (unit) => {
+            const errors = [];
+            const typeInfo = UNIT_TYPES[unit.type];
+            
+            if (!typeInfo || typeInfo.type === 'ASSET') return errors;
+            
+            if (typeInfo.type === 'MAC') {
+                unit.modules.forEach((mod, idx) => {
+                    if (mod.category === 'WEAPON') {
+                        const power = parseInt(mod.power) || 0;
+                        
+                        if (mod.isSlot0) {
+                             errors.push("Slot 0 must be Hardware.");
+                        } else {
+                            const slotNum = mod.isSlot0 ? 0 : (unit.modules[0].isSlot0 ? idx : idx + 1);
+
+                            if (slotNum === 1) {
+                                if (power > typeInfo.maxMain) errors.push(`Slot 1 Power ${power} exceeds Class limit (${typeInfo.maxMain})`);
+                            } else if (slotNum > 1) {
+                                if (power > typeInfo.maxSub) errors.push(`Slot ${slotNum} Power ${power} exceeds Class limit (${typeInfo.maxSub})`);
+                            }
+                        }
+                    }
+                });
+            } else {
+                let weaponCount = 0;
+                unit.modules.forEach(mod => {
+                    if (mod.category === 'WEAPON' || mod.category === 'BRAWL') {
+                        weaponCount++;
+                        const power = parseInt(mod.power) || (mod.category === 'BRAWL' ? 1 : 0);
+                        if (power > typeInfo.maxSub) errors.push(`Weapon Power ${power} exceeds limit (${typeInfo.maxSub})`);
+                    }
+                });
+                if (weaponCount > 2) errors.push('AUs cannot have more than 2 weapons');
+            }
+
+            // Duplicate Check
+            const counts = {};
+            unit.modules.forEach(mod => {
+                let key = null;
+                if (mod.category === 'WEAPON') key = generateWeaponCode(mod).replace('2x ', ''); // Base key only
+                else if (mod.category === 'HW') key = mod.hwName;
+                else if (mod.category === 'BRAWL') key = mod.brawlId;
+                
+                if (key && mod.category !== 'EMPTY') {
+                    const increment = mod.isDouble ? 2 : 1;
+                    counts[key] = (counts[key] || 0) + increment;
+                }
+            });
+
+            const maxDupes = typeInfo.type === 'MAC' ? 3 : 2;
+            for (const [key, count] of Object.entries(counts)) {
+                const limit = (key === 'V-Drill') ? 2 : maxDupes; 
+                if (count > limit) {
+                    errors.push(`Max ${limit} "${key}" allowed (Has ${count}).`);
+                }
+            }
+
+            return errors;
+        };
+
+        const createDefaultModules = (typeId, factionId, isMerc) => {
+            const typeData = UNIT_TYPES[typeId];
+            if (!typeData || typeData.type === 'ASSET') return [];
+            
+            const startSlots = typeData.type === 'MAC' ? 6 : 1;
+            const modules = [];
+
+            if (factionId === 'FIRST' && typeData.type === 'MAC' && !isMerc) {
+                modules.push({ category: 'HW', range: 'S', type: 'B', power: 1, subtype: '', hwName: 'Seeker', brawlId: 'P2', isSlot0: true, isDouble: false, customName: '' });
+            }
+
+            modules.push({ category: 'WEAPON', range: 'S', type: 'B', power: 1, subtype: '', hwName: 'Amplifier', brawlId: 'P2', isDouble: false, customName: '' });
+            
+            if (typeData.type === 'MAC') {
+                modules[modules.length-1].power = typeData.maxMain;
+                for (let i = 1; i < startSlots; i++) {
+                    modules.push({ category: 'HW', range: 'S', type: 'B', power: 1, subtype: '', hwName: 'Frame', brawlId: 'P2', isDouble: false, customName: '' });
+                }
+            }
+            return modules;
+        };
+
+        const sanitizeUnit = (unit) => {
+            return {
+                ...unit,
+                isMerc: unit.isMerc || false,
+                pilot: unit.pilot || { name: '', type: 'Standard', trick: '', isCommander: false, drill: '' },
+                perks: unit.perks || '',
+                flaws: unit.flaws || '',
+                card: unit.card || { suit: '', rank: '' },
+                count: unit.count || 1,
+                assetName: unit.assetName || REMOTE_ASSETS[0].name
+            };
+        };
+
+        // --- Components ---
+
+        const ImageUpload = ({ image, onImageChange }) => {
+            const fileInputRef = useRef(null);
+
+            const handleFileChange = (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onloadend = () => {
+                        onImageChange(reader.result);
+                    };
+                    reader.readAsDataURL(file);
+                }
+            };
+
+            return (
+                <div className="w-full h-full">
+                    <input 
+                        type="file" 
+                        ref={fileInputRef}
+                        onChange={handleFileChange} 
+                        accept="image/*" 
+                        className="hidden" 
+                    />
+                    <div 
+                        className={`w-full h-full min-h-[100px] flex flex-col items-center justify-center border-2 border-dashed rounded cursor-pointer transition-colors ${image ? 'border-slate-300' : 'border-slate-300 hover:border-blue-400 bg-slate-50'}`}
+                        onClick={() => fileInputRef.current.click()}
+                        title="Click to upload image"
+                    >
+                        {image ? (
+                            <img src={image} alt="Unit" className="w-full h-full object-cover rounded" />
+                        ) : (
+                            <div className="text-slate-400 flex flex-col items-center gap-1">
+                                <IconCamera />
+                                <span className="text-xs uppercase font-bold text-center leading-tight">Add<br/>Photo</span>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            );
+        };
+
+
+        const ModuleEditor = ({ module, index, displayIndex, unitType, onChange, onDelete, onClone, onMoveUp, onMoveDown, isFirstMovable, isLastMovable, isMac, availableHardware, showDoubleOption }) => {
+            const typeInfo = UNIT_TYPES[unitType];
+            const isAu = typeInfo.type === 'AU';
+            const ruleText = getModuleRule(module);
+            const isSlot0 = module.isSlot0;
+
+            return (
+                <div className={`flex flex-col lg:flex-row gap-2 p-2 ${isSlot0 ? 'bg-amber-50 border-amber-200' : 'bg-slate-50 border-slate-200'} border rounded mb-2 items-start lg:items-center text-sm group transition-colors`}>
+                    
+                    <div className="flex flex-col gap-0 opacity-20 group-hover:opacity-100 transition-opacity mr-1 shrink-0">
+                        <button onClick={onMoveUp} disabled={isFirstMovable || isSlot0} className="text-slate-500 hover:text-blue-600 disabled:opacity-30 disabled:hover:text-slate-500" title="Move Up">
+                            <IconArrowUp />
+                        </button>
+                        <button onClick={onMoveDown} disabled={isLastMovable || isSlot0} className="text-slate-500 hover:text-blue-600 disabled:opacity-30 disabled:hover:text-slate-500" title="Move Down">
+                            <IconArrowDown />
+                        </button>
+                    </div>
+
+                    <div className={`font-black w-6 flex-shrink-0 text-center ${isSlot0 ? 'text-amber-600' : 'text-slate-400'}`}>
+                        {isSlot0 ? 'O' : displayIndex}
+                    </div>
+                    
+                    <select 
+                        className="p-1 border rounded bg-white w-full lg:w-auto"
+                        value={module.category}
+                        disabled={isSlot0} 
+                        onChange={(e) => onChange(index, { ...module, category: e.target.value, range: 'S', type: 'B', power: 1, subtype: '', hwName: availableHardware[0]?.name || 'Frame', brawlId: 'P2', customName: '' })}
+                    >
+                        {isSlot0 ? <option value="HW">Hardware</option> : (
+                            <>
+                                <option value="WEAPON">Gun</option>
+                                <option value="BRAWL">Brawl</option>
+                                <option value="HW">Hardware</option>
+                                {isMac && <option value="EMPTY">Empty</option>}
+                            </>
+                        )}
+                    </select>
+
+                    <div className="flex-grow w-full lg:w-auto flex flex-col gap-1">
+                        
+                        {(module.category === 'WEAPON' || module.category === 'BRAWL') && (
+                             <input 
+                                type="text" 
+                                className="p-1 border rounded w-full text-sm placeholder-slate-400 mb-1" 
+                                placeholder="Weapon Name (Optional)"
+                                value={module.customName || ''}
+                                onChange={(e) => onChange(index, { ...module, customName: e.target.value })}
+                             />
+                        )}
+
+                        {module.category === 'WEAPON' && (
+                            <div className="flex flex-wrap gap-1">
+                                <select className="p-1 border rounded flex-grow" value={module.range} onChange={e => onChange(index, { ...module, range: e.target.value })}>
+                                    {WEAPON_RANGES.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
+                                </select>
+                                <select className="p-1 border rounded flex-grow" value={module.type} onChange={e => onChange(index, { ...module, type: e.target.value })}>
+                                    {WEAPON_TYPES.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+                                </select>
+                                <select className="p-1 border rounded w-16" value={module.power} onChange={e => onChange(index, { ...module, power: parseInt(e.target.value) })}>
+                                    {[1,2,3,4].map(p => <option key={p} value={p}>Pwr {p}</option>)}
+                                </select>
+                                <select className="p-1 border rounded flex-grow" value={module.subtype} onChange={e => onChange(index, { ...module, subtype: e.target.value })}>
+                                    {WEAPON_SUBTYPES.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                                </select>
+                            </div>
+                        )}
+
+                        {module.category === 'BRAWL' && (
+                            <div className="flex gap-1">
+                                <select className="p-1 border rounded w-full" value={module.brawlId} onChange={e => onChange(index, { ...module, brawlId: e.target.value })}>
+                                    {BRAWL_WEAPONS.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+                                </select>
+                                <select className="p-1 border rounded w-1/3" value={module.subtype || ''} onChange={e => onChange(index, { ...module, subtype: e.target.value })}>
+                                    {WEAPON_SUBTYPES.map(s => <option key={s.id} value={s.id}>{s.name || 'No Type'}</option>)}
+                                </select>
+                            </div>
+                        )}
+
+                        {module.category === 'HW' && (
+                            <select className="p-1 border rounded w-full" value={module.hwName} onChange={e => onChange(index, { ...module, hwName: e.target.value })}>
+                                {availableHardware.map(h => <option key={h.name} value={h.name}>{h.name}</option>)}
+                            </select>
+                        )}
+                        
+                        {module.category === 'EMPTY' && <div className="text-slate-400 italic p-1">Empty Slot</div>}
+                    </div>
+
+                    <div className="w-full lg:w-48 shrink-0">
+                        {ruleText && (
+                            <div className="text-xs text-slate-500 bg-white p-1.5 rounded border border-slate-200 leading-tight h-full flex items-center">
+                                {ruleText}
+                            </div>
+                        )}
+                    </div>
+
+                    <div className="flex items-center gap-2 min-w-[60px] justify-end ml-auto lg:ml-0 opacity-50 group-hover:opacity-100 transition-opacity">
+                         {module.category === 'WEAPON' && <span className="font-mono font-bold text-blue-600 mr-2">{generateWeaponCode(module)}</span>}
+                         
+                         {showDoubleOption && !isSlot0 && module.category !== 'EMPTY' && (
+                             <label className="flex items-center cursor-pointer mr-2" title="Double Module (+1pt)">
+                                 <span className="text-xs font-bold mr-1 text-slate-500">2x</span>
+                                 <input 
+                                    type="checkbox" 
+                                    checked={module.isDouble || false} 
+                                    onChange={(e) => onChange(index, { ...module, isDouble: e.target.checked })} 
+                                 />
+                             </label>
+                         )}
+
+                         {!isSlot0 && (
+                             <button onClick={() => onClone(index)} className="text-slate-400 hover:text-blue-600" title="Clone to next empty slot">
+                                <IconClone />
+                             </button>
+                         )}
+
+                        {isAu && (
+                            <button onClick={() => onDelete(index)} className="text-red-400 hover:text-red-600" title="Delete Slot">
+                                <IconTrash />
+                            </button>
+                        )}
+                        {isSlot0 && <span className="text-amber-500 font-bold text-xs uppercase">O-MOD</span>}
+                    </div>
+                </div>
+            );
+        };
+
+        const MACBuilder = () => {
+            const [forceName, setForceName] = useState("New Force");
+            const [factionId, setFactionId] = useState("NONE");
+            const [units, setUnits] = useState([]);
+            const [isPrintMode, setIsPrintMode] = useState(false);
+            const [showHelp, setShowHelp] = useState(false);
+            const [hitStates, setHitStates] = useState({});
+            const [destroyedStates, setDestroyedStates] = useState({});
+            const [depletedStates, setDepletedStates] = useState({});
+            const [damageStates, setDamageStates] = useState({});
+            
+            // Feature Flags
+            const [variantRules, setVariantRules] = useState({ 
+                remoteAssets: false, 
+                hiredMercs: false, 
+                perksFlaws: false, 
+                pilots: false,
+                doubleModules: false 
+            });
+
+            const fileInputRef = useRef(null);
+            const importUnitRef = useRef(null);
+
+            useEffect(() => {
+                if (units.length === 0) addUnit('MAC2');
+            }, []);
+
+            const toggleHit = (unitId, modIndex) => {
+                setHitStates(prev => {
+                    const unitHits = prev[unitId] || {};
+                    const newHit = !unitHits[modIndex];
+                    return { ...prev, [unitId]: { ...unitHits, [modIndex]: newHit } };
+                });
+            };
+
+            const toggleDestroyed = (unitId, modIndex) => {
+                setDestroyedStates(prev => {
+                    const unitDestroyed = prev[unitId] || {};
+                    const newDestroyed = !unitDestroyed[modIndex];
+                    return { ...prev, [unitId]: { ...unitDestroyed, [modIndex]: newDestroyed } };
+                });
+            };
+
+            const toggleDepleted = (unitId, modIndex, isDouble) => {
+                setDepletedStates(prev => {
+                    const unitDepleted = prev[unitId] || {};
+                    const currentCount = unitDepleted[modIndex] || 0;
+                    const maxCount = isDouble ? 2 : 1;
+                    const newCount = (currentCount + 1) % (maxCount + 1);
+                    return { ...prev, [unitId]: { ...unitDepleted, [modIndex]: newCount } };
+                });
+            };
+
+            const toggleInternalDamage = (unitId, damageIndex) => {
+                setDamageStates(prev => {
+                    const unitDmg = prev[unitId] || {};
+                    const newDmg = !unitDmg[damageIndex];
+                    return { ...prev, [unitId]: { ...unitDmg, [damageIndex]: newDmg } };
+                });
+            };
+
+            const getNextAvailableRank = (currentUnits) => {
+                const usedRanks = currentUnits.map(u => u.card?.rank).filter(Boolean);
+                return RANKS.find(r => !usedRanks.includes(r)) || '';
+            };
+
+            const getGlobalSuit = (currentUnits) => {
+                return currentUnits.find(u => u.card?.suit)?.card?.suit || '';
+            };
+
+            const addUnit = (typeId = 'MAC2') => {
+                setUnits(prevUnits => {
+                    const nextRank = getNextAvailableRank(prevUnits);
+                    const globalSuit = getGlobalSuit(prevUnits);
+                    const countStr = prevUnits.length + 1;
+                    const nameBase = typeId === 'REMOTE' ? 'Asset' : 'Unit';
+
+                    const newUnit = {
+                        id: Date.now() + Math.random(),
+                        name: `${nameBase} ${countStr}`,
+                        type: typeId,
+                        assetName: REMOTE_ASSETS[0].name,
+                        image: null,
+                        isMerc: false,
+                        pilot: { name: '', type: 'Standard', trick: '', isCommander: false, drill: '' },
+                        perks: '',
+                        flaws: '',
+                        card: { suit: globalSuit, rank: nextRank },
+                        modules: createDefaultModules(typeId, factionId, false),
+                        count: 1
+                    };
+                    return [...prevUnits, newUnit];
+                });
+            };
+
+            const updateUnit = (id, field, value, nestedField) => {
+                setUnits(prevUnits => {
+                    // Sync card suits across all units
+                    if (field === 'card' && nestedField === 'suit') {
+                        return prevUnits.map(u => ({
+                            ...u,
+                            card: { ...u.card, suit: value }
+                        }));
+                    }
+
+                    if (field === 'pilot' && nestedField === 'isCommander' && value === true) {
+                        return prevUnits.map(u => {
+                            if (u.id === id) return { ...u, pilot: { ...u.pilot, isCommander: true } };
+                            return { ...u, pilot: { ...u.pilot, isCommander: false } };
+                        });
+                    }
+
+                    return prevUnits.map(u => {
+                        if (u.id !== id) return u;
+                        
+                        if (field === 'type') {
+                            const defaultAsset = u.assetName || REMOTE_ASSETS[0].name;
+                            return sanitizeUnit({ 
+                                ...u, 
+                                type: value, 
+                                assetName: defaultAsset,
+                                modules: createDefaultModules(value, factionId, u.isMerc),
+                                count: 1 
+                            });
+                        }
+                        
+                        if (field === 'pilot') return { ...u, pilot: { ...u.pilot, [nestedField]: value } };
+                        if (field === 'card') return { ...u, card: { ...u.card, [nestedField]: value } };
+                        
+                        if (field === 'isMerc') {
+                            const isNowMerc = value;
+                            let newModules = u.modules ? [...u.modules] : [];
+                            
+                            if (isNowMerc) {
+                                newModules = newModules.filter(m => !m.isSlot0);
+                            } else if (factionId === 'FIRST' && UNIT_TYPES[u.type].type === 'MAC') {
+                                if (!newModules.some(m => m.isSlot0)) {
+                                    newModules.unshift({ category: 'HW', range: 'S', type: 'B', power: 1, subtype: '', hwName: 'Seeker', brawlId: 'P2', isSlot0: true, customName: '' });
+                                }
+                            }
+                            return { ...u, isMerc: isNowMerc, modules: newModules };
+                        }
+
+                        return { ...u, [field]: value };
+                    });
+                });
+            };
+
+            const updateModule = (unitId, modIndex, newModule) => {
+                setUnits(units.map(u => {
+                    if (u.id !== unitId) return u;
+                    const newModules = [...u.modules];
+                    newModules[modIndex] = newModule;
+                    return { ...u, modules: newModules };
+                }));
+            };
+
+            const cloneModule = (unitId, sourceIndex) => {
+                setUnits(units.map(u => {
+                    if (u.id !== unitId) return u;
+                    const sourceMod = u.modules[sourceIndex];
+                    if (sourceMod.isSlot0) return u;
+
+                    const newModules = [...u.modules];
+                    if (UNIT_TYPES[u.type].type === 'AU') {
+                        return { ...u, modules: [...u.modules, { ...sourceMod }] };
+                    }
+                    for (let i = 0; i < newModules.length; i++) {
+                         if (i !== sourceIndex && !newModules[i].isSlot0 && (newModules[i].category === 'EMPTY' || newModules[i].hwName === 'Frame')) {
+                             newModules[i] = { ...sourceMod, isSlot0: false };
+                             break;
+                         }
+                    }
+                    return { ...u, modules: newModules };
+                }));
+            }
+
+            const moveModule = (unitId, index, direction) => {
+                setUnits(units.map(u => {
+                    if (u.id !== unitId) return u;
+                    const newModules = [...u.modules];
+                    if (direction === -1 && index > 0) {
+                        if (newModules[index - 1].isSlot0) return u;
+                        [newModules[index - 1], newModules[index]] = [newModules[index], newModules[index - 1]];
+                    } else if (direction === 1 && index < newModules.length - 1) {
+                        [newModules[index + 1], newModules[index]] = [newModules[index], newModules[index + 1]];
+                    }
+                    return { ...u, modules: newModules };
+                }));
+            };
+
+            const addModuleSlot = (unitId) => {
+                setUnits(units.map(u => {
+                    if (u.id !== unitId) return u;
+                    return { ...u, modules: [...u.modules, { category: 'HW', range: 'S', type: 'B', power: 1, subtype: '', hwName: 'Armour', brawlId: 'P2', isDouble: false, customName: '' }] };
+                }));
+            };
+
+            const removeModuleSlot = (unitId, index) => {
+                setUnits(units.map(u => {
+                    if (u.id !== unitId) return u;
+                    const newModules = u.modules.filter((_, i) => i !== index);
+                    return { ...u, modules: newModules };
+                }));
+            };
+
+            const removeUnit = (id) => {
+                setUnits(units.filter(u => u.id !== id));
+            };
+
+            const duplicateUnit = (unit) => {
+                setUnits(prevUnits => {
+                    const nextRank = getNextAvailableRank(prevUnits);
+                    const globalSuit = getGlobalSuit(prevUnits);
+                    
+                    const newUnit = sanitizeUnit({ 
+                        ...unit, 
+                        id: Date.now() + Math.random(), 
+                        name: `${unit.name} (Copy)`, 
+                        pilot: {...unit.pilot, isCommander: false}, 
+                        card: { suit: globalSuit, rank: nextRank },
+                        modules: unit.modules ? JSON.parse(JSON.stringify(unit.modules)) : []
+                    });
+                    return [...prevUnits, newUnit];
+                });
+            };
+
+            const moveUnit = (index, direction) => {
+                if (direction === -1 && index > 0) {
+                    const newUnits = [...units];
+                    [newUnits[index - 1], newUnits[index]] = [newUnits[index], newUnits[index - 1]];
+                    setUnits(newUnits);
+                } else if (direction === 1 && index < units.length - 1) {
+                    const newUnits = [...units];
+                    [newUnits[index + 1], newUnits[index]] = [newUnits[index], newUnits[index + 1]];
+                    setUnits(newUnits);
+                }
+            };
+
+            const handleFactionChange = (e) => {
+                const newFaction = e.target.value;
+                setFactionId(newFaction);
+
+                setUnits(prevUnits => prevUnits.map(u => {
+                    const typeInfo = UNIT_TYPES[u.type];
+                    if (!typeInfo || typeInfo.type !== 'MAC') return u; 
+                    if (u.isMerc) return u;
+
+                    let newModules = [...u.modules];
+                    if (newFaction === 'FIRST') {
+                        if (!newModules.some(m => m.isSlot0)) {
+                            newModules.unshift({ 
+                                category: 'HW', range: 'S', type: 'B', power: 1, subtype: '', 
+                                hwName: 'Seeker', brawlId: 'P2', isSlot0: true, isDouble: false, customName: '' 
+                            });
+                        }
+                    } else {
+                        newModules = newModules.filter(m => !m.isSlot0);
+                    }
+                    return { ...u, modules: newModules };
+                }));
+            };
+
+            const toggleVariantRule = (ruleKey) => {
+                setVariantRules(prev => ({ ...prev, [ruleKey]: !prev[ruleKey] }));
+            }
+
+            const handleSave = () => {
+                const data = JSON.stringify({ forceName, factionId, units, variantRules }, null, 2);
+                const blob = new Blob([data], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = `${forceName.replace(/[^a-z0-9]/gi, '_').toLowerCase() || 'force'}.json`;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                URL.revokeObjectURL(url);
+            };
+
+            const handleLoad = (event) => {
+                const file = event.target.files[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        const data = JSON.parse(e.target.result);
+                        if (data.forceName) setForceName(data.forceName);
+                        if (data.factionId) setFactionId(data.factionId); 
+                        
+                        let loadedUnits = [];
+                        if (data.units) loadedUnits = data.units.map(sanitizeUnit);
+
+                        // Backwards compatibility for old JSON saves using 'myAssets'
+                        if (data.myAssets && data.myAssets.length > 0) {
+                            data.myAssets.forEach((assetName, idx) => {
+                                loadedUnits.push(sanitizeUnit({
+                                    id: Date.now() + Math.random() + idx,
+                                    name: assetName,
+                                    type: 'REMOTE',
+                                    assetName: assetName,
+                                    modules: [],
+                                    count: 1
+                                }));
+                            });
+                        }
+                        setUnits(loadedUnits);
+
+                        if (data.variantRules) setVariantRules(data.variantRules);
+                        else {
+                            setVariantRules(prev => ({
+                                ...prev,
+                                remoteAssets: data.showRemoteAssets || (data.myAssets && data.myAssets.length > 0) || false,
+                                doubleModules: data.showDoubleModules || false
+                            }));
+                        }
+                    } catch (err) {
+                        alert("Invalid file format or corrupt file.");
+                    }
+                };
+                reader.readAsText(file);
+                event.target.value = null;
+            };
+
+            const exportUnit = (unit) => {
+                const dataToExport = {
+                    macAttackExportType: 'UNIT',
+                    unitData: unit
+                };
+                const data = JSON.stringify(dataToExport, null, 2);
+                const blob = new Blob([data], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                const safeName = (unit.name || 'unit').replace(/[^a-z0-9]/gi, '_').toLowerCase();
+                link.download = `${safeName}.json`;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                URL.revokeObjectURL(url);
+            };
+
+            const handleImportUnit = (event) => {
+                const file = event.target.files[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        const data = JSON.parse(e.target.result);
+                        let importedUnit = null;
+                        
+                        if (data.macAttackExportType === 'UNIT' && data.unitData) {
+                            importedUnit = data.unitData;
+                        } else if (data.type && UNIT_TYPES[data.type]) {
+                            // Fallback if uploading a raw unit JSON block
+                            importedUnit = data;
+                        }
+
+                        if (importedUnit) {
+                            setUnits(prevUnits => {
+                                const nextRank = getNextAvailableRank(prevUnits);
+                                const globalSuit = getGlobalSuit(prevUnits);
+                                
+                                const newUnit = sanitizeUnit({ 
+                                    ...importedUnit, 
+                                    id: Date.now() + Math.random(), 
+                                    card: { suit: globalSuit, rank: nextRank }
+                                });
+                                return [...prevUnits, newUnit];
+                            });
+                        } else {
+                            alert("Invalid unit file format. Please upload a file exported using the Unit Export button.");
+                        }
+                    } catch (err) {
+                        alert("Invalid file format or corrupt file.");
+                    }
+                };
+                reader.readAsText(file);
+                event.target.value = null;
+            };
+
+            const copyToClipboard = () => {
+                let text = `**${forceName}** (${factionId !== 'NONE' ? FACTIONS.find(f=>f.id===factionId).name : 'No Faction'})\n`;
+                text += `Total Points: ${totalCost}\n\n`;
+                units.forEach(u => {
+                    const count = u.count || 1;
+                    const typeInfo = UNIT_TYPES[u.type];
+                    text += `**${count > 1 ? count + 'x ' : ''}${u.name}**`;
+                    if (u.card && u.card.rank && u.card.suit) {
+                        const suit = SUITS.find(s => s.name === u.card.suit);
+                        text += ` [${u.card.rank} of ${suit.symbol}]`;
+                    }
+                    text += ` - ${typeInfo.name} (${calculateCost(u)}pts)\n`;
+                    
+                    if (typeInfo.type === 'ASSET') {
+                         text += `   Asset: ${u.assetName}\n\n`;
+                         return;
+                    }
+
+                    if (variantRules.pilots && u.pilot?.name) text += `Pilot: ${u.pilot.name} (${u.pilot.type})\n`;
+                    let counter = 1;
+                    u.modules.forEach((m, i) => {
+                        let desc = '';
+                        if (m.category === 'WEAPON') desc = `${generateWeaponCode(m)}`;
+                        else if (m.category === 'BRAWL') desc = `Brawl: ${m.brawlId}`;
+                        else if (m.category === 'HW') desc = `HW: ${m.hwName}`;
+                        else desc = '[Empty]';
+                        
+                        if(m.isDouble) desc = `2x ${desc}`;
+                        if (m.customName) desc = `${m.customName} (${desc})`;
+
+                        let prefix = m.isSlot0 ? 'O' : `${counter++}`;
+                        text += `   ${prefix}. ${desc}\n`;
+                    });
+                    text += '\n';
+                });
+                navigator.clipboard.writeText(text).then(() => alert("List copied to clipboard!"));
+            };
+
+            const totalCost = units.reduce((sum, u) => sum + calculateCost(u), 0);
+            const selectedFaction = FACTIONS.find(f => f.id === factionId) || FACTIONS[0];
+            
+            // Force Level Validation
+            const totalMacs = units.filter(u => UNIT_TYPES[u.type]?.type === 'MAC').length;
+            const totalAus = units.filter(u => UNIT_TYPES[u.type]?.type === 'AU').length;
+            const totalAssets = units.filter(u => UNIT_TYPES[u.type]?.type === 'ASSET').reduce((sum, u) => sum + (u.count || 1), 0);
+            
+            const forceErrors = [];
+            if (totalMacs > 0 && totalMacs < 3) forceErrors.push("A legal force requires at least 3 MACs.");
+            if (totalAus > totalMacs) forceErrors.push(`Too many auxiliary formations. Max 1 AU formation per MAC (MACs: ${totalMacs}, AU Formations: ${totalAus}).`);
+            if (variantRules.remoteAssets && totalAssets > totalMacs) {
+                forceErrors.push(`Too many Remote Assets. Limit 1 per MAC (MACs: ${totalMacs}, Assets: ${totalAssets}).`);
+            }
+
+
+            if (isPrintMode) {
+                return (
+                    <div className="bg-white min-h-screen p-8 font-sans text-black">
+                        <div className="flex justify-between items-end border-b-2 border-black pb-4 mb-6 no-print">
+                            <div>
+                                <h1 className="text-4xl font-black tracking-tighter uppercase">{forceName}</h1>
+                            </div>
+                            <div className="text-right">
+                                <div className="text-3xl font-bold">{totalCost} <span className="text-sm font-normal text-gray-500">PTS</span></div>
+                                <div className="flex gap-3 mt-2 justify-end items-center">
+                                    <button onClick={() => window.print()} className={BTN_TOOL_CLASS}>
+                                        <IconPrinter /> Print
+                                    </button>
+                                    <button onClick={() => setIsPrintMode(false)} className="text-sm underline text-slate-500 hover:text-blue-600 cursor-pointer">Back to Edit</button>
+                                </div>
+                            </div>
+                        </div>
+                        <div className="hidden print-only mb-6 border-b-4 border-black pb-2">
+                             <div className="flex justify-between items-end">
+                                <div><h1 className="text-4xl font-black uppercase tracking-tighter">{forceName}</h1></div>
+                                <div className="text-2xl font-black">{totalCost} PTS</div>
+                             </div>
+                        </div>
+
+                        {selectedFaction.id !== 'NONE' && (
+                            <div className="mb-6 border-2 border-black p-3 bg-gray-100 break-inside-avoid">
+                                <h3 className="font-black uppercase text-lg">{selectedFaction.name}</h3>
+                                <p className="font-bold text-sm">{selectedFaction.ruleName}: <span className="font-normal">{selectedFaction.rule}</span></p>
+                            </div>
+                        )}
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+                            {units.map((u, idx) => {
+                                const cost = calculateCost(u);
+                                const typeInfo = UNIT_TYPES[u.type];
+                                const isMac = typeInfo.type === 'MAC';
+                                const isAsset = typeInfo.type === 'ASSET';
+                                let slotCounter = 1;
+                                const count = u.count || 1;
+                                
+                                const cardSuit = u.card?.suit ? SUITS.find(s => s.name === u.card.suit) : null;
+                                const cardColor = cardSuit?.color === 'text-red-600' ? 'text-red-600' : 'text-black';
+
+                                return (
+                                    <div key={u.id} className="border-2 border-black break-inside-avoid flex flex-col relative">
+                                        <div className="bg-black text-white p-2 px-3 flex justify-between items-center shrink-0">
+                                            <div className="flex flex-col">
+                                                <span className="font-black uppercase text-lg tracking-tight leading-none">
+                                                    {count > 1 && <span className="text-amber-300 mr-2">{count}x</span>}
+                                                    {u.name}
+                                                </span>
+                                                {u.card?.rank && cardSuit && (
+                                                    <span className={`text-sm font-bold uppercase mt-1 px-2 py-0.5 bg-white rounded w-fit border-2 border-gray-400 ${cardColor}`}>
+                                                        {u.card.rank} {cardSuit.symbol}
+                                                    </span>
+                                                )}
+                                            </div>
+                                            <div className="flex gap-4 text-sm items-center">
+                                                {u.isMerc && variantRules.hiredMercs && (
+                                                     <span className="font-bold text-xs bg-white text-black px-2 py-0.5 rounded">Hired MAC</span>
+                                                )}
+                                                <span className="font-medium opacity-80">{typeInfo.name}</span>
+                                                <span className="font-black text-lg">{cost} pts</span>
+                                            </div>
+                                        </div>
+                                        
+                                        {!isAsset && (variantRules.pilots || variantRules.perksFlaws) && (
+                                            <div className="bg-white p-2 text-xs border-b border-black flex flex-col gap-1">
+                                                {variantRules.perksFlaws && (u.perks || u.flaws) && (
+                                                    <div className="leading-tight">
+                                                        {u.perks && <span className="mr-3"><span className="font-bold">Perks: {u.perks}</span> <span className="italic text-gray-600">{PERKS.find(p => p.name === u.perks)?.rule}</span></span>}
+                                                        {u.flaws && <span><span className="font-bold">Flaws: {u.flaws}</span> <span className="italic text-gray-600">{FLAWS.find(f => f.name === u.flaws)?.rule}</span></span>}
+                                                    </div>
+                                                )}
+                                                {variantRules.pilots && (
+                                                    <div className="leading-tight flex flex-wrap gap-3 border-t border-gray-300 pt-1 mt-1">
+                                                        {u.pilot?.name && <span><span className="font-bold">Pilot:</span> {u.pilot.name} ({u.pilot.type})</span>}
+                                                        {u.pilot?.isCommander && <span className="font-bold uppercase bg-black text-white px-1 text-[10px]">COMMANDER</span>}
+                                                        {u.pilot?.trick && <span><span className="font-bold">Trick: {u.pilot.trick}</span> <span className="italic text-gray-600">- {PILOT_TRICKS.find(t => t.name === u.pilot.trick)?.rule}</span></span>}
+                                                        {u.pilot?.isCommander && u.pilot?.drill && <span><span className="font-bold">Drill: {u.pilot.drill}</span> <span className="italic text-gray-600">- {COMMAND_DRILLS.find(d => d.name === u.pilot.drill)?.rule}</span></span>}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
+
+                                        {!isAsset && typeInfo.intDmg > 0 && (
+                                            <div className="bg-gray-100 p-2 border-b border-black flex items-center gap-2 justify-center">
+                                                <span className="text-xs font-bold uppercase">Internal Damage:</span>
+                                                {Array.from({length: typeInfo.intDmg}).map((_, di) => {
+                                                    const isMarked = damageStates[u.id]?.[di];
+                                                    return <div key={di} className={`w-6 h-6 border-2 border-black ${isMarked ? 'bg-black' : 'bg-white'} cursor-pointer`} onClick={() => toggleInternalDamage(u.id, di)}></div>;
+                                                })}
+                                            </div>
+                                        )}
+
+                                        <div className="flex">
+                                            {isAsset ? (
+                                                <div className="p-4 bg-gray-50 grow">
+                                                    <div className="font-black text-lg mb-1">{u.assetName}</div>
+                                                    <div className="text-sm italic text-gray-700">{REMOTE_ASSETS.find(a => a.name === u.assetName)?.rule}</div>
+                                                </div>
+                                            ) : (
+                                                <>
+                                                    <div className="grow">
+                                                        <table className="w-full text-sm border-collapse">
+                                                            <thead>
+                                                                <tr className="border-b-2 border-black text-left">
+                                                                    <th className="p-2 w-8 text-center font-bold">#</th>
+                                                                    <th className="p-2 font-bold">Module</th>
+                                                                    <th className="p-2 font-bold">Notes</th>
+                                                                    {isMac && <th className="p-2 w-10 text-center font-bold">Hit</th>}
+                                                                    {isMac && <th className="p-2 w-10 text-center font-bold">Dst</th>}
+                                                                    <th className="p-2 w-10 text-center font-bold">Dep</th>
+                                                                </tr>
+                                                            </thead>
+                                                            <tbody>
+                                                                {u.modules.map((mod, i) => {
+                                                                    let code = "";
+                                                                    let notes = getModuleRule(mod);
+                                                                    
+                                                                    if (mod.category === 'WEAPON') code = generateWeaponCode(mod);
+                                                                    else if (mod.category === 'BRAWL') {
+                                                                        code = mod.brawlId;
+                                                                        const subtype = WEAPON_SUBTYPES.find(s => s.id === mod.subtype);
+                                                                        if (subtype && subtype.code) code += subtype.code;
+                                                                    } else if (mod.category === 'HW') code = mod.hwName;
+                                                                    else { code = ""; notes = ""; }
+                                                                    
+                                                                    if (mod.isDouble) code = `2x ${code}`;
+                                                                    const isHit = hitStates[u.id]?.[i];
+                                                                    const isDestroyed = destroyedStates[u.id]?.[i];
+                                                                    const isExpendable = mod.category === 'WEAPON' && mod.subtype === 'X';
+                                                                    const depletedCount = depletedStates[u.id]?.[i] || 0;
+                                                                    let displayNum = mod.isSlot0 ? 'O' : slotCounter++;
+
+                                                                    let label = mod.customName ? (
+                                                                        <div>
+                                                                            <span className="block font-bold">{mod.customName}</span>
+                                                                            <span className="text-xs text-slate-500 font-mono">{code}</span>
+                                                                        </div>
+                                                                    ) : <span className="font-bold">{code}</span>;
+
+                                                                    return (
+                                                                        <tr key={i} className={`border-b border-gray-300 last:border-0 h-10 ${mod.isSlot0 ? 'bg-gray-100' : ''}`}>
+                                                                            <td className="p-2 text-center font-bold text-gray-400 border-r border-gray-200">{displayNum}</td>
+                                                                            <td className="p-2 font-bold border-r border-gray-200">{label}</td>
+                                                                            <td className="p-2 text-gray-600 text-xs leading-tight border-r border-gray-200">{notes}</td>
+                                                                            {isMac && (
+                                                                                <td className="p-2 text-center align-middle cursor-pointer hover:bg-gray-50" onClick={() => toggleHit(u.id, i)}>
+                                                                                    <div className={`w-4 h-4 border-2 border-gray-400 rounded-full mx-auto ${isHit ? 'bg-black border-black' : 'bg-white'}`}></div>
+                                                                                </td>
+                                                                            )}
+                                                                            {isMac && (
+                                                                                <td className="p-2 text-center align-middle cursor-pointer hover:bg-gray-50" onClick={() => toggleDestroyed(u.id, i)}>
+                                                                                    <div className={`w-4 h-4 border-2 border-gray-400 rounded-sm mx-auto ${isDestroyed ? 'bg-red-600 border-red-600' : 'bg-white'}`}></div>
+                                                                                </td>
+                                                                            )}
+                                                                            <td className="p-2 text-center align-middle cursor-pointer hover:bg-gray-50" onClick={() => isExpendable && toggleDepleted(u.id, i, mod.isDouble)}>
+                                                                                {isExpendable && (
+                                                                                    <div className="flex gap-1 justify-center">
+                                                                                        <div className={`w-3 h-3 border-2 border-amber-500 rounded-sm ${depletedCount >= 1 ? 'bg-amber-500' : 'bg-white'}`}></div>
+                                                                                        {mod.isDouble && <div className={`w-3 h-3 border-2 border-amber-500 rounded-sm ${depletedCount >= 2 ? 'bg-amber-500' : 'bg-white'}`}></div>}
+                                                                                    </div>
+                                                                                )}
+                                                                            </td>
+                                                                        </tr>
+                                                                    );
+                                                                })}
+                                                            </tbody>
+                                                        </table>
+                                                    </div>
+                                                    <div className="w-32 border-l-2 border-black flex flex-col shrink-0 bg-gray-50">
+                                                        <div className="grow relative flex items-center justify-center overflow-hidden min-h-[240px]">
+                                                            {u.image ? (
+                                                                <img src={u.image} className="absolute inset-0 w-full h-full object-cover" />
+                                                            ) : (
+                                                                <span className="text-gray-300 text-xs font-bold uppercase -rotate-45">Portrait</span>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                </>
+                                            )}
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+                );
+            }
+
+            return (
+                <div className="bg-slate-100 min-h-screen p-4 sm:p-6">
+                    <div className="max-w-5xl mx-auto bg-white p-4 rounded-lg shadow-sm border border-slate-200 sticky top-4 z-20 mb-8">
+                        <div className="flex flex-wrap gap-4 mb-4 p-3 bg-slate-100 border border-slate-200 rounded text-xs font-bold text-slate-600 uppercase tracking-wider">
+                            <span className="text-slate-400 mr-2 self-center">Options:</span>
+                            <label className="flex items-center gap-2 cursor-pointer hover:text-blue-600 transition-colors">
+                                <input type="checkbox" className="accent-blue-600 w-4 h-4" checked={variantRules.remoteAssets} onChange={() => toggleVariantRule('remoteAssets')} /> 
+                                Remote Assets
+                            </label>
+                            <label className="flex items-center gap-2 cursor-pointer hover:text-blue-600 transition-colors">
+                                <input type="checkbox" className="accent-blue-600 w-4 h-4" checked={variantRules.hiredMercs} onChange={() => toggleVariantRule('hiredMercs')} /> 
+                                Hired MACs
+                            </label>
+                            <label className="flex items-center gap-2 cursor-pointer hover:text-blue-600 transition-colors">
+                                <input type="checkbox" className="accent-blue-600 w-4 h-4" checked={variantRules.pilots} onChange={() => toggleVariantRule('pilots')} /> 
+                                Pilots & Cmdrs
+                            </label>
+                            <label className="flex items-center gap-2 cursor-pointer hover:text-blue-600 transition-colors">
+                                <input type="checkbox" className="accent-blue-600 w-4 h-4" checked={variantRules.perksFlaws} onChange={() => toggleVariantRule('perksFlaws')} /> 
+                                Perks & Flaws
+                            </label>
+                            <label className="flex items-center gap-2 cursor-pointer hover:text-blue-600 transition-colors">
+                                <input type="checkbox" className="accent-blue-600 w-4 h-4" checked={variantRules.doubleModules} onChange={() => toggleVariantRule('doubleModules')} /> 
+                                Double Modules
+                            </label>
+                        </div>
+
+                        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
+                            <div className="w-full lg:w-auto flex-grow">
+                                <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Force Name</label>
+                                <input type="text" value={forceName} onChange={(e) => setForceName(e.target.value)} className="text-2xl font-black w-full bg-transparent border-b border-transparent hover:border-slate-300 focus:border-blue-500 outline-none transition-colors" />
+                            </div>
+                            <div className="w-full lg:w-64">
+                                <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Faction</label>
+                                <select className="w-full p-2 border rounded bg-slate-50 font-bold text-slate-700" value={factionId} onChange={handleFactionChange}>
+                                    {FACTIONS.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}
+                                </select>
+                            </div>
+                            <div className="flex items-center gap-2 shrink-0 self-end lg:self-center">
+                                <div className="text-right mr-2">
+                                    <div className="text-xs text-slate-400 font-bold uppercase">Total</div>
+                                    <div className="text-3xl font-black text-blue-600">{totalCost}<span className="text-sm text-slate-400 ml-1">PTS</span></div>
+                                </div>
+                                <button onClick={copyToClipboard} className={BTN_TOOL_CLASS} title="Copy Text"><IconClipboard /></button>
+                                <button onClick={handleSave} className={BTN_TOOL_CLASS} title="Save Force"><IconSave /></button>
+                                <input type="file" ref={fileInputRef} onChange={handleLoad} accept=".json" className="hidden" />
+                                <button onClick={() => fileInputRef.current.click()} className={BTN_TOOL_CLASS} title="Load Force"><IconLoad /></button>
+                                <button onClick={() => setIsPrintMode(true)} className={BTN_TOOL_CLASS} title="Print"><IconPrinter /></button>
+                                <button onClick={() => setShowHelp(true)} className={BTN_TOOL_CLASS} title="About / Help"><IconHelp /></button>
+                            </div>
+                        </div>
+                        {selectedFaction.id !== 'NONE' && (
+                            <div className="mt-4 p-3 bg-blue-50 border border-blue-100 rounded text-sm text-blue-800 flex gap-2 items-start">
+                                <span className="font-black uppercase shrink-0">{selectedFaction.ruleName}:</span>
+                                <span>{selectedFaction.rule}</span>
+                            </div>
+                        )}
+                    </div>
+
+                    {forceErrors.length > 0 && (
+                        <div className="max-w-5xl mx-auto mb-6 bg-red-50 text-red-700 p-4 rounded-lg border border-red-200 shadow-sm flex items-start gap-3">
+                            <IconInfo />
+                            <div>
+                                <h4 className="font-bold text-sm uppercase tracking-wide mb-1">Force Building Warnings</h4>
+                                <ul className="list-disc list-inside text-sm">
+                                    {forceErrors.map((err, i) => <li key={i}>{err}</li>)}
+                                </ul>
+                            </div>
+                        </div>
+                    )}
+
+                    <div className="max-w-5xl mx-auto grid gap-6">
+                        {units.map((unit, unitIndex) => {
+                            const typeInfo = UNIT_TYPES[unit.type];
+                            if (!typeInfo) return null;
+                            const cost = calculateCost(unit);
+                            const errors = checkValidation(unit);
+                            
+                            const isMac = typeInfo.type === 'MAC';
+                            const isInf = typeInfo.id === 'INF';
+                            const isAsset = typeInfo.type === 'ASSET';
+                            
+                            let availableHW = [];
+                            if (!isAsset) {
+                                availableHW = HARDWARE.filter(h => {
+                                    const matchesType = (isMac ? h.type.includes('M') : (isInf ? h.type.includes('I') : h.type.includes('V'))) || h.type.includes('A');
+                                    const isFactionUnique = FACTIONS.some(f => f.module === h.name);
+                                    if (isFactionUnique) return !unit.isMerc && selectedFaction.module === h.name;
+                                    return matchesType;
+                                });
+                            }
+
+                            let slotCounter = 1;
+                            const currentSuit = SUITS.find(s => s.name === unit.card?.suit);
+                            const cardColorClass = currentSuit?.color || 'text-slate-400';
+                            const maxFormation = getFormationLimit(unit.type);
+
+                            return (
+                                <div key={unit.id} className={`bg-white rounded-lg shadow-sm border ${unit.isMerc && variantRules.hiredMercs ? 'border-amber-300 ring-1 ring-amber-300' : 'border-slate-200'} overflow-hidden relative`}>
+                                    {unit.isMerc && variantRules.hiredMercs && (
+                                        <div className="absolute top-0 right-0 bg-amber-300 text-amber-900 text-xs font-black px-3 py-1 z-10 rounded-bl-lg uppercase tracking-wider">Hired MAC</div>
+                                    )}
+
+                                    <div className="bg-slate-50 p-4 border-b border-slate-100 flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
+                                        <div className="flex-grow w-full sm:w-auto flex gap-4 items-center">
+                                            {!isAsset && (
+                                                <div className="w-16 h-16 shrink-0">
+                                                    <ImageUpload image={unit.image} onImageChange={(newImage) => updateUnit(unit.id, 'image', newImage)} />
+                                                </div>
+                                            )}
+                                            <div className="w-full">
+                                                <div className="flex justify-between items-start">
+                                                    <input 
+                                                        type="text" 
+                                                        value={unit.name} 
+                                                        onChange={(e) => updateUnit(unit.id, 'name', e.target.value)}
+                                                        className="font-bold text-lg bg-transparent w-full outline-none text-slate-700 placeholder-slate-300"
+                                                        placeholder="Unit Name"
+                                                    />
+                                                    
+                                                    <div className="flex gap-1 items-center bg-white border border-slate-200 rounded p-1 ml-2 shadow-sm shrink-0">
+                                                        <IconCards size={16} className="text-slate-400 ml-1"/>
+                                                        <select className={`p-1 text-sm font-bold bg-transparent outline-none ${cardColorClass}`} value={unit.card?.suit || ''} onChange={(e) => updateUnit(unit.id, 'card', e.target.value, 'suit')} title="Playing Card Suit">
+                                                            <option value="" className="text-slate-400">Suit</option>
+                                                            {SUITS.map(s => <option key={s.name} value={s.name} className={s.color}>{s.symbol}</option>)}
+                                                        </select>
+                                                        <select className={`p-1 text-sm font-bold bg-transparent outline-none w-12 text-center ${cardColorClass}`} value={unit.card?.rank || ''} onChange={(e) => updateUnit(unit.id, 'card', e.target.value, 'rank')} title="Playing Card Rank">
+                                                            <option value="" className="text-slate-400">-</option>
+                                                            {RANKS.map(r => <option key={r} value={r}>{r}</option>)}
+                                                        </select>
+                                                    </div>
+                                                </div>
+
+                                                <div className="flex flex-wrap gap-2 mt-2 items-center">
+                                                    {maxFormation > 1 && (
+                                                        <select className="p-1 border rounded bg-white text-sm font-bold w-16 text-center" value={unit.count || 1} onChange={(e) => updateUnit(unit.id, 'count', parseInt(e.target.value))} title="Stack Size">
+                                                            {[...Array(maxFormation).keys()].map(n => <option key={n+1} value={n+1}>{n+1}x</option>)}
+                                                        </select>
+                                                    )}
+                                                    <select className="p-1 border rounded bg-white text-sm font-medium" value={unit.type} onChange={(e) => updateUnit(unit.id, 'type', e.target.value)}>
+                                                        {Object.values(UNIT_TYPES).map(t => {
+                                                            if (t.id === 'REMOTE' && !variantRules.remoteAssets) return null;
+                                                            return <option key={t.id} value={t.id}>{t.name}</option>
+                                                        })}
+                                                    </select>
+                                                    <div className="bg-blue-100 text-blue-800 px-2 py-1 rounded font-bold text-xs flex items-center">{cost}pt</div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {!isAsset && (variantRules.pilots || variantRules.perksFlaws || variantRules.hiredMercs) && (
+                                        <div className="bg-gray-50 px-4 py-3 border-b border-slate-100 flex flex-wrap gap-4 text-sm items-center">
+                                            {variantRules.hiredMercs && (
+                                                <label className="flex items-center gap-2 cursor-pointer bg-white p-1.5 rounded border border-slate-200 hover:border-amber-400">
+                                                    <input type="checkbox" checked={unit.isMerc || false} onChange={(e) => updateUnit(unit.id, 'isMerc', e.target.checked)} />
+                                                    <span className="font-medium text-slate-600">Hired MAC</span>
+                                                </label>
+                                            )}
+                                            {variantRules.pilots && (
+                                                <>
+                                                    <input type="text" placeholder="Pilot Name" className="p-1.5 border rounded w-32" value={unit.pilot?.name || ''} onChange={(e) => updateUnit(unit.id, 'pilot', e.target.value, 'name')} />
+                                                    <select className="p-1.5 border rounded" value={unit.pilot?.type || 'Standard'} onChange={(e) => updateUnit(unit.id, 'pilot', e.target.value, 'type')}>
+                                                        <option value="Standard">Standard</option>
+                                                        <option value="Rookie">Rookie</option>
+                                                        <option value="Notable">Notable</option>
+                                                    </select>
+                                                    {unit.pilot?.type === 'Notable' && (
+                                                        <select className="p-1.5 border rounded w-32" value={unit.pilot?.trick || ''} onChange={(e) => updateUnit(unit.id, 'pilot', e.target.value, 'trick')}>
+                                                            <option value="">No Trick</option>
+                                                            {PILOT_TRICKS.map(t => <option key={t.name} value={t.name}>{t.name}</option>)}
+                                                        </select>
+                                                    )}
+                                                    <label className="flex items-center gap-2 cursor-pointer">
+                                                        <input type="checkbox" checked={unit.pilot?.isCommander || false} onChange={(e) => updateUnit(unit.id, 'pilot', e.target.checked, 'isCommander')} />
+                                                        <span className="font-bold text-slate-600">Cmdr</span>
+                                                    </label>
+                                                    {unit.pilot?.isCommander && (
+                                                        <select className="p-1.5 border rounded w-32" value={unit.pilot?.drill || ''} onChange={(e) => updateUnit(unit.id, 'pilot', e.target.value, 'drill')}>
+                                                            <option value="">No Drill</option>
+                                                            {COMMAND_DRILLS.map(d => <option key={d.name} value={d.name}>{d.name}</option>)}
+                                                        </select>
+                                                    )}
+                                                </>
+                                            )}
+                                            {variantRules.perksFlaws && (
+                                                <>
+                                                    <select className="p-1.5 border rounded w-32" value={unit.perks || ''} onChange={(e) => updateUnit(unit.id, 'perks', e.target.value)}>
+                                                        <option value="">No Perk</option>
+                                                        {PERKS.map(p => <option key={p.name} value={p.name}>{p.name}</option>)}
+                                                    </select>
+                                                    <select className="p-1.5 border rounded w-32" value={unit.flaws || ''} onChange={(e) => updateUnit(unit.id, 'flaws', e.target.value)}>
+                                                        <option value="">No Flaw</option>
+                                                        {FLAWS.map(f => <option key={f.name} value={f.name}>{f.name}</option>)}
+                                                    </select>
+                                                </>
+                                            )}
+                                        </div>
+                                    )}
+
+                                    {errors.length > 0 && (
+                                        <div className="bg-red-50 text-red-600 p-3 text-sm flex items-center gap-2 border-b border-red-100">
+                                            <IconAlert />
+                                            <div className="flex flex-col">{errors.map((e, i) => <span key={i}>{e}</span>)}</div>
+                                        </div>
+                                    )}
+
+                                    {isAsset ? (
+                                        <div className="p-6 bg-white">
+                                            <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Select Remote Asset</label>
+                                            <select 
+                                                className="w-full p-2 border border-slate-300 rounded font-bold text-slate-700 bg-slate-50 mb-3"
+                                                value={unit.assetName}
+                                                onChange={e => updateUnit(unit.id, 'assetName', e.target.value)}
+                                            >
+                                                {REMOTE_ASSETS.map(a => <option key={a.name} value={a.name}>{a.name} ({a.cost} pts)</option>)}
+                                            </select>
+                                            <div className="text-sm text-slate-600 italic p-3 bg-blue-50 border border-blue-100 rounded">
+                                                {REMOTE_ASSETS.find(a => a.name === unit.assetName)?.rule}
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <div className="p-4">
+                                            {unit.modules && unit.modules.map((mod, i) => {
+                                                const displayIndex = mod.isSlot0 ? 'O' : slotCounter++;
+                                                const isFirstMovable = i === 0 || (unit.modules[0].isSlot0 && i === 1);
+                                                const isLastMovable = i === unit.modules.length - 1;
+                                                return (
+                                                    <ModuleEditor 
+                                                        key={i} index={i} displayIndex={displayIndex} module={mod} unitType={unit.type}
+                                                        isMac={isMac} availableHardware={availableHW} showDoubleOption={variantRules.doubleModules}
+                                                        isFirstMovable={isFirstMovable} isLastMovable={isLastMovable}
+                                                        onChange={(idx, newMod) => updateModule(unit.id, idx, newMod)} onDelete={(idx) => removeModuleSlot(unit.id, idx)}
+                                                        onClone={(idx) => cloneModule(unit.id, idx)} onMoveUp={() => moveModule(unit.id, i, -1)} onMoveDown={() => moveModule(unit.id, i, 1)}
+                                                    />
+                                                );
+                                            })}
+                                            {!isMac && (
+                                                <button onClick={() => addModuleSlot(unit.id)} className="w-full py-2 border-2 border-dashed border-slate-200 text-slate-400 rounded hover:border-blue-300 hover:text-blue-500 flex justify-center items-center gap-2 transition-colors text-sm font-bold mt-2">
+                                                    <div className="flex items-center gap-2"><IconPlus size={16} /> Add Module Slot</div>
+                                                </button>
+                                            )}
+                                        </div>
+                                    )}
+
+                                    <div className="bg-slate-50 p-2 flex justify-end gap-2 border-t border-slate-100">
+                                        <div className="mr-auto flex items-center px-2 border-r border-slate-200">
+                                            <button onClick={() => moveUnit(unitIndex, -1)} disabled={unitIndex === 0} className={BTN_FOOTER_CLASS} title="Move Unit Up"><IconArrowUp /></button>
+                                            <button onClick={() => moveUnit(unitIndex, 1)} disabled={unitIndex === units.length - 1} className={BTN_FOOTER_CLASS} title="Move Unit Down"><IconArrowDown /></button>
+                                        </div>
+                                        <button onClick={() => exportUnit(unit)} className={BTN_FOOTER_CLASS} title="Export Single Unit"><IconSave size={18} /></button>
+                                        <button onClick={() => duplicateUnit(unit)} className={BTN_FOOTER_CLASS} title="Duplicate Unit"><IconCopy /></button>
+                                        <button onClick={() => removeUnit(unit.id)} className={`${BTN_FOOTER_CLASS} hover:text-red-600 hover:bg-red-50`} title="Delete Unit"><IconTrash /></button>
+                                    </div>
+                                </div>
+                            );
+                        })}
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <button onClick={() => addUnit('MAC2')} className="bg-slate-800 text-white py-4 rounded-lg shadow-sm hover:bg-slate-700 flex justify-center items-center gap-2 font-bold text-lg transition-all">
+                                <IconPlus size={24} /> Add New Unit
+                            </button>
+                            
+                            <input type="file" ref={importUnitRef} onChange={handleImportUnit} accept=".json" className="hidden" />
+                            <button onClick={() => importUnitRef.current.click()} className="bg-white border-2 border-slate-300 text-slate-700 py-4 rounded-lg shadow-sm hover:bg-slate-50 flex justify-center items-center gap-2 font-bold text-lg transition-all">
+                                <IconLoad size={24} /> Import Saved Unit
+                            </button>
+                        </div>
+
+                        <div className="text-center text-slate-400 text-sm py-8">MAC Attack List Builder | Unofficial Tool</div>
+                    </div>
+
+{showHelp && (
+    <div className="fixed inset-0 bg-slate-900 bg-opacity-50 flex items-center justify-center p-4 z-50 no-print" onClick={() => setShowHelp(false)}>
+        <div className="bg-white rounded shadow-lg max-w-lg w-full p-6 text-sm overflow-y-auto max-h-[90vh]" onClick={e => e.stopPropagation()}>
+            <div className="flex justify-between items-center mb-4">
+                <h3 className="text-xl font-black text-slate-800">MAC Attack List Builder</h3>
+                <span className="text-xs font-bold bg-slate-100 text-slate-500 px-2 py-1 rounded">v1.0</span>
+            </div>
+            
+            <div className="mb-6 space-y-5 text-slate-600">
+                <div>
+                    <h4 className="font-bold text-slate-800 border-b border-slate-200 pb-1 mb-2">Credits</h4>
+                    <p className="mb-2">
+                        <strong>MAC Attack</strong> is a sci-fi miniature wargame designed by <strong>Chris McDowall</strong>. Published by <strong>Bastionland Press</strong>.
+                    </p>
+                    <p className="mb-4">
+                        <a 
+                            href="https://bastionlandpress.com/products/mac-attack" 
+                            target="_blank" 
+                            rel="noopener noreferrer" 
+                            className="text-blue-600 hover:text-blue-800 underline font-medium"
+                        >
+                            Official MAC Attack Page
+                        </a>
+                    </p>
+                    <p className="text-xs italic text-slate-500">
+                        This is an unofficial, community-built tool created to support the game.
+                    </p>
+                </div>
+            </div>
+            
+            <div className="text-center mt-6">
+                <button onClick={() => setShowHelp(false)} className="bg-slate-800 text-white py-2 px-6 rounded font-bold hover:bg-slate-700 transition-colors w-full">
+                    Close
+                </button>
+            </div>
+        </div>
+    </div>
+)}
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<MACBuilder />);
+    </script>
+</body>
+</html>
