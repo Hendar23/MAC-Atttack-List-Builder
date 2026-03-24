@@ -1,4 +1,4 @@
-# MAC Attack List Builder
+# The Grill - A MAC Attack List Builder
 
 An unofficial, browser-based roster builder and interactive digital tracker for MAC Attack, the sci-fi miniature wargame by Chris McDowall.
 
