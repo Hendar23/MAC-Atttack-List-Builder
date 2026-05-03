@@ -422,6 +422,7 @@
             return {
                 ...unit,
                 isMerc: unit.isMerc || false,
+                division: unit.division || 'A',
                 pilot: unit.pilot || { name: '', type: 'Standard', trick: '', isCommander: false, drill: '' },
                 perks: unit.perks || '',
                 flaws: unit.flaws || '',
@@ -682,6 +683,7 @@
                         id: Date.now() + Math.random(),
                         name: `${nameBase} ${countStr}`,
                         type: typeId,
+                        division: 'A',
                         assetName: REMOTE_ASSETS[0].name,
                         image: null,
                         isMerc: false,
@@ -993,6 +995,9 @@
                         const suit = SUITS.find(s => s.name === u.card.suit);
                         text += ` [${u.card.rank} of ${suit.symbol}]`;
                     }
+                    if (typeInfo.type !== 'ASSET') {
+                        text += ` [Div ${u.division || 'A'}]`;
+                    }
                     text += ` - ${typeInfo.name} (${calculateCost(u)}pts)\n`;
                     
                     if (typeInfo.type === 'ASSET') {
@@ -1033,6 +1038,39 @@
             if (totalAus > totalMacs) forceErrors.push(`Too many auxiliary formations. Max 1 AU formation per MAC (MACs: ${totalMacs}, AU Formations: ${totalAus}).`);
             if (variantRules.remoteAssets && totalAssets > totalMacs) {
                 forceErrors.push(`Too many Remote Assets. Limit 1 per MAC (MACs: ${totalMacs}, Assets: ${totalAssets}).`);
+            }
+
+            // Division Level Validation
+            const deployableUnits = units.filter(u => UNIT_TYPES[u.type]?.type !== 'ASSET');
+            const totalDeployable = deployableUnits.length;
+            const divCounts = { A: 0, B: 0, C: 0 };
+            const divMacs = { A: 0, B: 0, C: 0 };
+            let commanderDiv = null;
+
+            deployableUnits.forEach(u => {
+                const div = u.division || 'A';
+                divCounts[div] = (divCounts[div] || 0) + 1;
+                if (UNIT_TYPES[u.type]?.type === 'MAC') {
+                    divMacs[div] = (divMacs[div] || 0) + 1;
+                }
+                if (u.pilot?.isCommander) {
+                    commanderDiv = div;
+                }
+            });
+
+            if (totalDeployable > 0) {
+                ['A', 'B', 'C'].forEach(div => {
+                    if (divCounts[div] > totalDeployable / 2) {
+                        forceErrors.push(`Division ${div} contains more than half of the force's total units (${divCounts[div]}/${totalDeployable}).`);
+                    }
+                    if (divMacs[div] === 0) {
+                        forceErrors.push(`Division ${div} must contain at least one MAC.`);
+                    }
+                });
+            }
+
+            if (commanderDiv && commanderDiv !== 'A') {
+                forceErrors.push(`The Commander must be in Division A (currently in Div ${commanderDiv}).`);
             }
 
 
@@ -1096,6 +1134,9 @@
                                             <div className="flex gap-4 text-sm items-center font-sans">
                                                 {u.isMerc && variantRules.hiredMercs && (
                                                      <span className="font-bold text-xs bg-white text-black px-2 py-0.5 rounded">Hired MAC</span>
+                                                )}
+                                                {!isAsset && (
+                                                     <span className="font-bold text-xs bg-white text-black px-2 py-0.5 rounded">DIV {u.division || 'A'}</span>
                                                 )}
                                                 <span className="font-medium opacity-80">{typeInfo.name}</span>
                                                 <span className="font-black text-lg">{cost} pts</span>
@@ -1339,20 +1380,19 @@
                                             )}
                                             <div className="w-full">
                                                 <div className="flex justify-between items-start">
-                                                    <input 
-                                                        type="text" 
-                                                        value={unit.name} 
-                                                        onChange={(e) => updateUnit(unit.id, 'name', e.target.value)}
-                                                        className="font-niagara text-4xl tracking-wide bg-transparent w-full outline-none text-slate-700 placeholder-slate-300"
-                                                        placeholder="Unit Name"
-                                                    />
-                                                    
-                                                    <div className="flex gap-2 items-center bg-white border border-slate-200 rounded p-2 ml-3 shadow-sm shrink-0 font-sans">
-                                                        <IconCards size={24} className="text-slate-400 ml-1"/>
-                                                        <select className={`p-1 text-lg font-bold bg-transparent outline-none ${cardColorClass}`} value={unit.card?.suit || ''} onChange={(e) => updateUnit(unit.id, 'card', e.target.value, 'suit')} title="Playing Card Suit">
-                                                            <option value="" className="text-slate-400">Suit</option>
-                                                            {SUITS.map(s => <option key={s.name} value={s.name} className={s.color}>{s.symbol}</option>)}
-                                                        </select>
+    <input 
+        type="text" 
+        value={unit.name} 
+        onChange={(e) => updateUnit(unit.id, 'name', e.target.value)}
+        className="font-niagara text-4xl tracking-wide bg-transparent w-full outline-none text-slate-700 placeholder-slate-300"
+        placeholder="Unit Name"
+    />
+    
+    <div className="flex gap-2 items-center bg-white border border-slate-200 rounded p-2 ml-3 shadow-sm shrink-0 font-sans">
+        <select className={`p-1 text-lg font-bold bg-transparent outline-none ${cardColorClass}`} value={unit.card?.suit || ''} onChange={(e) => updateUnit(unit.id, 'card', e.target.value, 'suit')} title="Playing Card Suit">
+            <option value="" className="text-slate-400">Suit</option>
+            {SUITS.map(s => <option key={s.name} value={s.name} className={s.color}>{s.symbol}</option>)}
+        </select>
                                                         <select className={`p-1 text-lg font-bold bg-transparent outline-none w-16 text-center ${cardColorClass}`} value={unit.card?.rank || ''} onChange={(e) => updateUnit(unit.id, 'card', e.target.value, 'rank')} title="Playing Card Rank">
                                                             <option value="" className="text-slate-400">-</option>
                                                             {RANKS.map(r => <option key={r} value={r}>{r}</option>)}
@@ -1372,6 +1412,13 @@
                                                             return <option key={t.id} value={t.id}>{t.name}</option>
                                                         })}
                                                     </select>
+                                                    {!isAsset && (
+                                                        <select className="p-1 border rounded bg-slate-200 text-sm font-bold text-slate-700 w-20" value={unit.division || 'A'} onChange={(e) => updateUnit(unit.id, 'division', e.target.value)} title="Division">
+                                                            <option value="A">Div A</option>
+                                                            <option value="B">Div B</option>
+                                                            <option value="C">Div C</option>
+                                                        </select>
+                                                    )}
                                                     <div className="bg-blue-100 text-blue-800 px-2 py-1 rounded font-bold text-xs flex items-center">{cost}pt</div>
                                                 </div>
                                             </div>
