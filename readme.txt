@@ -13,7 +13,7 @@ This tool is designed to make list-building fast and to provide a clean sheet fo
 * Assign playing cards directly to units for initiative tracking.
 
 ## Live Web Version
-You can access the live version of the builder here: `[Insert GitHub URL here]`
+You can access the live version of the builder here: https://hendar23.github.io/MAC-Atttack-List-Builder/
 
 ## Offline Use
 Because the entire application is contained within a single file, you can simply download `index.html` and open it in any modern web browser.
