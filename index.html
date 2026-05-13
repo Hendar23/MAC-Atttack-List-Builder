@@ -387,10 +387,34 @@
 
             const maxDupes = typeInfo.type === 'MAC' ? 3 : 2;
             for (const [key, count] of Object.entries(counts)) {
-                const limit = (key === 'V-Drill') ? 2 : maxDupes; 
-                if (count > limit) {
-                    errors.push(`Max ${limit} ${key} allowed (Has ${count}).`);
+                if (count > maxDupes) {
+                    errors.push(`Max ${maxDupes} ${key} allowed (Has ${count}).`);
                 }
+            }
+
+            // Units can carry a maximum of 2 brawl weapons, which must be identical.
+            let brawlWeaponCount = 0;
+            let brawlWeapon = null;
+            let brawlWeaponSlot = -1;
+
+            unit.modules.forEach((mod, idx) => {
+                const isBrawlWeapon = mod.category === 'BRAWL' || (mod.category === 'HW' && mod.hwName === 'V-Drill');
+                if (!isBrawlWeapon) {
+                    return;
+                }
+                brawlWeaponCount += 1;
+                const slotNum = mod.isSlot0 ? 0 : (unit.modules[0].isSlot0 ? idx : idx + 1);
+                if (brawlWeapon === null) {
+                    brawlWeapon = mod;
+                    brawlWeaponSlot = slotNum;
+                } else if (brawlWeapon.category !== mod.category ||
+                          brawlWeapon.brawlId !== mod.brawlId ||
+                          brawlWeapon.subtype !== mod.subtype) {
+                    errors.push(`Brawl weapons must be identical (Has different weapons in slots ${brawlWeaponSlot} and ${slotNum}).`);
+                }
+            });
+            if (brawlWeaponCount > 2) {
+                errors.push(`Units can carry a maximum of 2 brawl weapons (Has ${brawlWeaponCount}).`);
             }
 
             return errors;
