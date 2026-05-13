@@ -744,13 +744,21 @@
                         
                         if (field === 'type') {
                             const defaultAsset = u.assetName || REMOTE_ASSETS[0].name;
-                            return sanitizeUnit({ 
-                                ...u, 
-                                type: value, 
+                            const newUnit = {
+                                ...u,
+                                type: value,
                                 assetName: defaultAsset,
-                                modules: createDefaultModules(value, factionId, u.isMerc),
-                                count: 1 
-                            });
+                                count: 1
+                            };
+
+                            // Do not reset modules if we only change between MAC classes
+                            const oldTypeInfo = UNIT_TYPES[u.type];
+                            const newTypeInfo = UNIT_TYPES[value];
+                            if (oldTypeInfo.type !== newTypeInfo.type || newTypeInfo.type !== "MAC") {
+                                newUnit.modules = createDefaultModules(value, factionId, u.isMerc);
+                            }
+
+                            return sanitizeUnit(newUnit);
                         }
                         
                         if (field === 'pilot') return { ...u, pilot: { ...u.pilot, [nestedField]: value } };
