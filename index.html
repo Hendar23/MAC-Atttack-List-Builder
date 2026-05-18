@@ -1088,6 +1088,7 @@
             const divCounts = { A: 0, B: 0, C: 0 };
             const divMacs = { A: 0, B: 0, C: 0 };
             let commanderDiv = null;
+            const unitNameByCard = new Map();
 
             deployableUnits.forEach(u => {
                 const div = u.division || 'A';
@@ -1097,6 +1098,14 @@
                 }
                 if (u.pilot?.isCommander) {
                     commanderDiv = div;
+                }
+                if (u.card && u.card.rank && u.card.suit) {
+                    const card = `${u.card.rank}-${u.card.suit}`;
+                    if (unitNameByCard.has(card)) {
+                        forceErrors.push(`Units ${unitNameByCard.get(card)} and ${u.name} have the same card.`);
+                    } else {
+                        unitNameByCard.set(card, u.name);
+                    }
                 }
             });
 
