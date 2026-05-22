@@ -264,7 +264,7 @@
 
         const generateSubTypeCode = (w) => {
             if (w.subtype || w.expendable) {
-                return `-${w.expendable ? EXPENDABLE_SUBTYPE.id : ''}${w.subtype || ''}`;
+                return `-${w.subtype || ''}${w.expendable ? EXPENDABLE_SUBTYPE.id : ''}`;
             }
             return '';
         }
