@@ -187,10 +187,10 @@
         ];
 
         const WEAPON_SUBTYPES = [
-            { id: '', name: 'None', code: '', rule: '' },
-            { id: 'T', name: 'Thermal', code: 'T', rule: 'Ignore Cover. Heat vs MACs' },
-            { id: 'J', name: 'Jolt', code: 'J', rule: 'Jolt vs MACs. Move=2 Hits/Jolt' },
-            { id: 'R', name: 'Rad', code: 'R', rule: 'Rad vs MACs. Cool=Hit/Rad' },
+            { id: '', name: 'None', rule: '' },
+            { id: 'T', name: 'Thermal', rule: 'Ignore Cover. Heat vs MACs' },
+            { id: 'J', name: 'Jolt', rule: 'Jolt vs MACs. Move=2 Hits/Jolt' },
+            { id: 'R', name: 'Rad', rule: 'Rad vs MACs. Cool=Hit/Rad' },
         ];
 
         const EXPENDABLE_SUBTYPE = { id: 'X', name: 'Expendable', code: 'X', rule: '+Power AD, 1 Use' };
@@ -262,14 +262,24 @@
 
         // --- Helper Functions ---
 
+        const generateSubTypeCode = (w) => {
+            if (w.subtype || w.expendable) {
+                return `-${w.expendable ? EXPENDABLE_SUBTYPE.id : ''}${w.subtype || ''}`;
+            }
+            return '';
+        }
+
         const generateWeaponCode = (w) => {
             if (!w.range || !w.type || !w.power) return '---';
-            let subtypeCode = '';
-            if (w.subtype || w.expendable) {
-                subtypeCode = `-${w.expendable ? EXPENDABLE_SUBTYPE.code : ''}${w.subtype || ''}`;
-            }
-            return `${w.isDouble ? '2x ' : ''}${w.range}${w.type}${w.power}${subtypeCode}`;
+            return `${w.isDouble ? '2x ' : ''}${w.range}${w.type}${w.power}${generateSubTypeCode(w)}`;
         };
+
+        const generateBrawlCode = (b) => {
+            if (!b.brawlId) {
+                return '---';
+            }
+            return `${b.isDouble ? '2x ' : ''}${b.brawlId}${generateSubTypeCode(b)}`;
+        }
 
         const getModuleRule = (mod) => {
             let parts = [];
@@ -287,6 +297,9 @@
             } else if (mod.category === 'BRAWL') {
                 const b = BRAWL_WEAPONS.find(x => x.id === mod.brawlId);
                 if (b) parts.push(b.rule);
+                if (mod.expendable) {
+                    parts.push(EXPENDABLE_SUBTYPE.rule);
+                }
                 const s = WEAPON_SUBTYPES.find(x => x.id === mod.subtype);
                 if (s && s.rule) parts.push(s.rule);
             } else if (mod.category === 'HW') {
@@ -417,6 +430,7 @@
                     brawlWeaponSlot = slotNum;
                 } else if (brawlWeapon.category !== mod.category ||
                           brawlWeapon.brawlId !== mod.brawlId ||
+                          brawlWeapon.expendable !== mod.expendable ||
                           brawlWeapon.subtype !== mod.subtype) {
                     errors.push(`Brawl weapons must be identical (Has different weapons in slots ${brawlWeaponSlot} and ${slotNum}).`);
                 }
@@ -436,15 +450,15 @@
             const modules = [];
 
             if (factionId === 'FIRST' && typeData.type === 'MAC' && !isMerc) {
-                modules.push({ category: 'HW', range: 'S', type: 'B', power: 1, subtype: '', hwName: 'Seeker', brawlId: 'P2', isSlot0: true, isDouble: false, customName: '' });
+                modules.push({ category: 'HW', range: 'S', type: 'B', power: 1, subtype: '', expendable: false, hwName: 'Seeker', brawlId: 'P2', isSlot0: true, isDouble: false, customName: '' });
             }
 
-            modules.push({ category: 'WEAPON', range: 'S', type: 'B', power: 1, subtype: '', hwName: 'Amplifier', brawlId: 'P2', isDouble: false, customName: '' });
+            modules.push({ category: 'WEAPON', range: 'S', type: 'B', power: 1, subtype: '', expendable: false, hwName: 'Amplifier', brawlId: 'P2', isDouble: false, customName: '' });
             
             if (typeData.type === 'MAC') {
                 modules[modules.length-1].power = typeData.maxMain;
                 for (let i = 1; i < startSlots; i++) {
-                    modules.push({ category: 'HW', range: 'S', type: 'B', power: 1, subtype: '', hwName: 'Frame', brawlId: 'P2', isDouble: false, customName: '' });
+                    modules.push({ category: 'HW', range: 'S', type: 'B', power: 1, subtype: '', expendable: false, hwName: 'Frame', brawlId: 'P2', isDouble: false, customName: '' });
                 }
             }
             return modules;
@@ -534,7 +548,7 @@
                         className="p-1 border rounded bg-white w-full lg:w-auto font-sans"
                         value={module.category}
                         disabled={isSlot0} 
-                        onChange={(e) => onChange(index, { ...module, category: e.target.value, range: 'S', type: 'B', power: 1, subtype: '', hwName: availableHardware[0]?.name || 'Frame', brawlId: 'P2', customName: '' })}
+                        onChange={(e) => onChange(index, { ...module, category: e.target.value, range: 'S', type: 'B', power: 1, subtype: '', expendable: false, hwName: availableHardware[0]?.name || 'Frame', brawlId: 'P2', customName: '' })}
                     >
                         {isSlot0 ? <option value="HW">Hardware</option> : (
                             <>
@@ -569,13 +583,13 @@
                                 <select className="p-1 border rounded w-16" value={module.power} onChange={e => onChange(index, { ...module, power: parseInt(e.target.value) })}>
                                     {[1,2,3,4].map(p => <option key={p} value={p}>Pwr {p}</option>)}
                                 </select>
-                                <label className="flex items-center gap-2 cursor-pointer">
-                                    <input type="checkbox" checked={module.expendable || false} onChange={(e) => onChange(index, { ...module, expendable: e.target.value })} />
-                                    <span className="font-bold text-slate-600">Expendable</span>
-                                </label>
                                 <select className="p-1 border rounded flex-grow" value={module.subtype} onChange={e => onChange(index, { ...module, subtype: e.target.value })}>
                                     {WEAPON_SUBTYPES.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                                 </select>
+                                <label className="flex items-center gap-2 cursor-pointer">
+                                    <input type="checkbox" checked={module.expendable || false} onChange={(e) => onChange(index, { ...module, expendable: e.target.checked })} />
+                                    <span className="font-bold text-slate-600">Expendable</span>
+                                </label>
                             </div>
                         )}
 
@@ -584,13 +598,13 @@
                                 <select className="p-1 border rounded w-full" value={module.brawlId} onChange={e => onChange(index, { ...module, brawlId: e.target.value })}>
                                     {BRAWL_WEAPONS.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
                                 </select>
-                                <label className="flex items-center gap-2 cursor-pointer">
-                                    <input type="checkbox" checked={module.expendable || false} onChange={(e) => onChange(index, { ...module, expendable: e.target.value })} />
-                                    <span className="font-bold text-slate-600">Expendable</span>
-                                </label>
                                 <select className="p-1 border rounded w-1/3" value={module.subtype || ''} onChange={e => onChange(index, { ...module, subtype: e.target.value })}>
                                     {WEAPON_SUBTYPES.map(s => <option key={s.id} value={s.id}>{s.name || 'No Type'}</option>)}
                                 </select>
+                                <label className="flex items-center gap-2 cursor-pointer">
+                                    <input type="checkbox" checked={module.expendable || false} onChange={(e) => onChange(index, { ...module, expendable: e.target.checked })} />
+                                    <span className="font-bold text-slate-600">Expendable</span>
+                                </label>
                             </div>
                         )}
 
@@ -613,6 +627,7 @@
 
                     <div className="flex items-center gap-2 min-w-[60px] justify-end ml-auto lg:ml-0 opacity-50 group-hover:opacity-100 transition-opacity font-sans">
                          {module.category === 'WEAPON' && <span className="font-mono font-bold text-blue-600 mr-2">{generateWeaponCode(module)}</span>}
+                         {module.category === 'BRAWL' && <span className="font-mono font-bold text-blue-600 mr-2">{generateBrawlCode(module)}</span>}
                          
                          {showDoubleOption && !isSlot0 && module.category !== 'EMPTY' && (
                              <label className="flex items-center cursor-pointer mr-2" title="Double Module (+1pt)">
@@ -788,7 +803,7 @@
                                 newModules = newModules.filter(m => !m.isSlot0);
                             } else if (factionId === 'FIRST' && UNIT_TYPES[u.type].type === 'MAC') {
                                 if (!newModules.some(m => m.isSlot0)) {
-                                    newModules.unshift({ category: 'HW', range: 'S', type: 'B', power: 1, subtype: '', hwName: 'Seeker', brawlId: 'P2', isSlot0: true, customName: '' });
+                                    newModules.unshift({ category: 'HW', range: 'S', type: 'B', power: 1, subtype: '', expendable: false, hwName: 'Seeker', brawlId: 'P2', isSlot0: true, customName: '' });
                                 }
                             }
                             return { ...u, isMerc: isNowMerc, modules: newModules };
@@ -845,7 +860,7 @@
             const addModuleSlot = (unitId) => {
                 setUnits(units.map(u => {
                     if (u.id !== unitId) return u;
-                    return { ...u, modules: [...u.modules, { category: 'HW', range: 'S', type: 'B', power: 1, subtype: '', hwName: 'Armour', brawlId: 'P2', isDouble: false, customName: '' }] };
+                    return { ...u, modules: [...u.modules, { category: 'HW', range: 'S', type: 'B', power: 1, subtype: '', expendable: false, hwName: 'Armour', brawlId: 'P2', isDouble: false, customName: '' }] };
                 }));
             };
 
@@ -913,7 +928,7 @@
                     if (newFaction === 'FIRST') {
                         if (!newModules.some(m => m.isSlot0)) {
                             newModules.unshift({ 
-                                category: 'HW', range: 'S', type: 'B', power: 1, subtype: '', 
+                                category: 'HW', range: 'S', type: 'B', power: 1, subtype: '', expendable: false,
                                 hwName: 'Seeker', brawlId: 'P2', isSlot0: true, isDouble: false, customName: '' 
                             });
                         }
@@ -1068,7 +1083,7 @@
                     u.modules.forEach((m, i) => {
                         let desc = '';
                         if (m.category === 'WEAPON') desc = `${generateWeaponCode(m)}`;
-                        else if (m.category === 'BRAWL') desc = `Brawl: ${m.brawlId}`;
+                        else if (m.category === 'BRAWL') desc = `Brawl: ${generateBrawlCode(m)}`;
                         else if (m.category === 'HW') desc = `HW: ${m.hwName}`;
                         else desc = '[Empty]';
                         
@@ -1274,16 +1289,14 @@
                                                                     
                                                                     if (mod.category === 'WEAPON') code = generateWeaponCode(mod);
                                                                     else if (mod.category === 'BRAWL') {
-                                                                        code = mod.brawlId;
-                                                                        const subtype = WEAPON_SUBTYPES.find(s => s.id === mod.subtype);
-                                                                        if (subtype && subtype.code) code += subtype.code;
+                                                                        code = generateBrawlCode(mod);
                                                                     } else if (mod.category === 'HW') code = mod.hwName;
                                                                     else { code = ""; notes = ""; }
                                                                     
                                                                     if (mod.isDouble) code = `2x ${code}`;
                                                                     const isHit = hitStates[u.id]?.[i];
                                                                     const isDestroyed = destroyedStates[u.id]?.[i];
-                                                                    const isExpendable = mod.category === 'WEAPON' && mod.subtype === 'X';
+                                                                    const isExpendable = mod.expendable;
                                                                     const depletedCount = depletedStates[u.id]?.[i] || 0;
                                                                     let displayNum = mod.isSlot0 ? 'O' : slotCounter++;
 
