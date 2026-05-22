@@ -125,6 +125,8 @@
             { name: 'Twitchy', rule: '+1TN vs Motion 2 or less.' },
         ];
 
+        const ROOKIE_PILOT_RULE = 'Reroll beneficial 6s. On rerolled 6 remove this rule.';
+
         const PILOT_TRICKS = [
             { name: 'Bullrush', rule: 'Move +3" if you collide.' },
             { name: 'Cruise', rule: 'End move on 1 Heat? Lose it.' },
@@ -1214,6 +1216,7 @@
                                                     <div className="leading-tight flex flex-wrap gap-3 border-t border-gray-300 pt-1 mt-1">
                                                         {u.pilot?.name && <span><span className="font-bold">Pilot:</span> {u.pilot.name} ({u.pilot.type})</span>}
                                                         {u.pilot?.isCommander && <span className="font-bold uppercase bg-black text-white px-1 text-[10px]">COMMANDER</span>}
+                                                        {u.pilot?.type === 'Rookie' && <span><span className="font-bold">Rookie</span> <span className="italic text-gray-600">- {ROOKIE_PILOT_RULE}</span></span>}
                                                         {u.pilot?.trick && <span><span className="font-bold">Trick: {u.pilot.trick}</span> <span className="italic text-gray-600">- {PILOT_TRICKS.find(t => t.name === u.pilot.trick)?.rule}</span></span>}
                                                         {u.pilot?.isCommander && u.pilot?.drill && <span><span className="font-bold">Drill: {u.pilot.drill}</span> <span className="italic text-gray-600">- {COMMAND_DRILLS.find(d => d.name === u.pilot.drill)?.rule}</span></span>}
                                                     </div>
