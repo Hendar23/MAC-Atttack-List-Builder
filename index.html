@@ -188,11 +188,12 @@
 
         const WEAPON_SUBTYPES = [
             { id: '', name: 'None', code: '', rule: '' },
-            { id: 'X', name: 'Expendable', code: '-X', rule: '+Power AD, 1 Use' },
-            { id: 'T', name: 'Thermal', code: '-T', rule: 'Ignore Cover. Heat vs MACs' },
-            { id: 'J', name: 'Jolt', code: '-J', rule: 'Jolt vs MACs. Move=2 Hits/Jolt' },
-            { id: 'R', name: 'Rad', code: '-R', rule: 'Rad vs MACs. Cool=Hit/Rad' },
+            { id: 'T', name: 'Thermal', code: 'T', rule: 'Ignore Cover. Heat vs MACs' },
+            { id: 'J', name: 'Jolt', code: 'J', rule: 'Jolt vs MACs. Move=2 Hits/Jolt' },
+            { id: 'R', name: 'Rad', code: 'R', rule: 'Rad vs MACs. Cool=Hit/Rad' },
         ];
+
+        const EXPENDABLE_SUBTYPE = { id: 'X', name: 'Expendable', code: 'X', rule: '+Power AD, 1 Use' };
 
         const BRAWL_WEAPONS = [
             { id: 'P2', name: 'P2 (Piercing)', cost: 0, power: 1, rule: '+2AD, Piercing' },
@@ -263,7 +264,11 @@
 
         const generateWeaponCode = (w) => {
             if (!w.range || !w.type || !w.power) return '---';
-            return `${w.isDouble ? '2x ' : ''}${w.range}${w.type}${w.power}${w.subtype || ''}`;
+            let subtypeCode = '';
+            if (w.subtype || w.expendable) {
+                subtypeCode = `-${w.expendable ? EXPENDABLE_SUBTYPE.code : ''}${w.subtype || ''}`;
+            }
+            return `${w.isDouble ? '2x ' : ''}${w.range}${w.type}${w.power}${subtypeCode}`;
         };
 
         const getModuleRule = (mod) => {
@@ -275,6 +280,9 @@
                 const s = WEAPON_SUBTYPES.find(x => x.id === mod.subtype);
                 if (r && r.rule) parts.push(r.rule);
                 if (t && t.rule) parts.push(t.rule);
+                if (mod.expendable) {
+                    parts.push(EXPENDABLE_SUBTYPE.rule);
+                }
                 if (s && s.rule) parts.push(s.rule);
             } else if (mod.category === 'BRAWL') {
                 const b = BRAWL_WEAPONS.find(x => x.id === mod.brawlId);
@@ -561,6 +569,10 @@
                                 <select className="p-1 border rounded w-16" value={module.power} onChange={e => onChange(index, { ...module, power: parseInt(e.target.value) })}>
                                     {[1,2,3,4].map(p => <option key={p} value={p}>Pwr {p}</option>)}
                                 </select>
+                                <label className="flex items-center gap-2 cursor-pointer">
+                                    <input type="checkbox" checked={module.expendable || false} onChange={(e) => onChange(index, { ...module, expendable: e.target.value })} />
+                                    <span className="font-bold text-slate-600">Expendable</span>
+                                </label>
                                 <select className="p-1 border rounded flex-grow" value={module.subtype} onChange={e => onChange(index, { ...module, subtype: e.target.value })}>
                                     {WEAPON_SUBTYPES.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                                 </select>
@@ -572,6 +584,10 @@
                                 <select className="p-1 border rounded w-full" value={module.brawlId} onChange={e => onChange(index, { ...module, brawlId: e.target.value })}>
                                     {BRAWL_WEAPONS.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
                                 </select>
+                                <label className="flex items-center gap-2 cursor-pointer">
+                                    <input type="checkbox" checked={module.expendable || false} onChange={(e) => onChange(index, { ...module, expendable: e.target.value })} />
+                                    <span className="font-bold text-slate-600">Expendable</span>
+                                </label>
                                 <select className="p-1 border rounded w-1/3" value={module.subtype || ''} onChange={e => onChange(index, { ...module, subtype: e.target.value })}>
                                     {WEAPON_SUBTYPES.map(s => <option key={s.id} value={s.id}>{s.name || 'No Type'}</option>)}
                                 </select>
