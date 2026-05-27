@@ -553,16 +553,17 @@
                 val = val.substring(2);
             }
 
-            // Regex for Standard Weapons: [S/L/A] + [B/P/G/M] + [1-4] + Optional [X/T/J/R]
-            const weaponRegex = /^([SLA])([BPGM])([1-4])([XTJR])?$/;
+            // Regex for Standard Weapons: [S/L/A] + [B/P/G/M] + [1-4] + Optional combination of [X,T,J,R]
+            const weaponRegex = /^([SLA])([BPGM])([1-4])([XTJR]{0,2})$/;
             
-            // Regex for Brawl Weapons: [P/B/G/M] + 2 + Optional [X/T/J/R]
-            const brawlRegex = /^([PBGM]2)([XTJR])?$/;
+            // Regex for Brawl Weapons: [P/B/G/M] + 2 + Optional combination of [X,T,J,R]
+            const brawlRegex = /^([PBGM]2)([XTJR]{0,2})$/;
 
             let weaponMatch = val.match(weaponRegex);
             let brawlMatch = val.match(brawlRegex);
 
             if (weaponMatch) {
+                let subtypeStr = weaponMatch[4] || '';
                 onChange(index, {
                     ...module,
                     category: 'WEAPON',
@@ -570,17 +571,20 @@
                     range: weaponMatch[1],
                     type: weaponMatch[2],
                     power: parseInt(weaponMatch[3]),
-                    subtype: weaponMatch[4] || ''
+                    subtype: subtypeStr.replace(/X/g, ''), // Strip X to set base subtype (T, J, R)
+                    expendable: subtypeStr.includes('X') // Map X to the separate expendable boolean
                 });
                 setParseInput("");
                 setParseError(false);
             } else if (brawlMatch) {
+                let subtypeStr = brawlMatch[2] || '';
                 onChange(index, {
                     ...module,
                     category: 'BRAWL',
                     isDouble: isDouble,
                     brawlId: brawlMatch[1],
-                    subtype: brawlMatch[2] || ''
+                    subtype: subtypeStr.replace(/X/g, ''),
+                    expendable: subtypeStr.includes('X')
                 });
                 setParseInput("");
                 setParseError(false);
@@ -610,7 +614,7 @@
                 className="p-1 border rounded bg-white w-full lg:w-auto font-sans"
                 value={module.category}
                 disabled={isSlot0} 
-                onChange={(e) => onChange(index, { ...module, category: e.target.value, range: 'S', type: 'B', power: 1, subtype: '', hwName: availableHardware[0]?.name || 'Frame', brawlId: 'P2', customName: '' })}
+                onChange={(e) => onChange(index, { ...module, category: e.target.value, range: 'S', type: 'B', power: 1, subtype: '', expendable: false, hwName: availableHardware[0]?.name || 'Frame', brawlId: 'P2', customName: '' })}
             >
                 {isSlot0 ? <option value="HW">Hardware</option> : (
                     <>
@@ -636,7 +640,7 @@
                          <input
                             type="text"
                             className={`p-1 border rounded w-1/3 min-w-[120px] text-sm placeholder-slate-400 font-sans transition-colors ${parseError ? 'border-red-500 bg-red-50 text-red-700 outline-red-500' : 'border-slate-200'}`}
-                            placeholder="Code (e.g. SP2)"
+                            placeholder="Code (e.g. SP2-TX)"
                             value={parseInput}
                             onChange={(e) => { setParseInput(e.target.value); setParseError(false); }}
                             onKeyDown={handleParse}
@@ -659,17 +663,25 @@
                         <select className="p-1 border rounded flex-grow" value={module.subtype} onChange={e => onChange(index, { ...module, subtype: e.target.value })}>
                             {WEAPON_SUBTYPES.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                         </select>
+                        <label className="flex items-center gap-2 cursor-pointer ml-1 pr-2">
+                            <input type="checkbox" className="accent-blue-600 w-4 h-4" checked={module.expendable || false} onChange={(e) => onChange(index, { ...module, expendable: e.target.checked })} />
+                            <span className="font-bold text-slate-600">Expendable</span>
+                        </label>
                     </div>
                 )}
 
                 {module.category === 'BRAWL' && (
-                    <div className="flex gap-1">
+                    <div className="flex gap-1 items-center">
                         <select className="p-1 border rounded w-full" value={module.brawlId} onChange={e => onChange(index, { ...module, brawlId: e.target.value })}>
                             {BRAWL_WEAPONS.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
                         </select>
                         <select className="p-1 border rounded w-1/3" value={module.subtype || ''} onChange={e => onChange(index, { ...module, subtype: e.target.value })}>
                             {WEAPON_SUBTYPES.map(s => <option key={s.id} value={s.id}>{s.name || 'No Type'}</option>)}
                         </select>
+                        <label className="flex items-center gap-2 cursor-pointer ml-1 pr-2 shrink-0">
+                            <input type="checkbox" className="accent-blue-600 w-4 h-4" checked={module.expendable || false} onChange={(e) => onChange(index, { ...module, expendable: e.target.checked })} />
+                            <span className="font-bold text-slate-600">Expendable</span>
+                        </label>
                     </div>
                 )}
 
@@ -692,6 +704,7 @@
 
             <div className="flex items-center gap-2 min-w-[60px] justify-end ml-auto lg:ml-0 opacity-50 group-hover:opacity-100 transition-opacity font-sans">
                  {module.category === 'WEAPON' && <span className="font-mono font-bold text-blue-600 mr-2">{generateWeaponCode(module)}</span>}
+                 {module.category === 'BRAWL' && <span className="font-mono font-bold text-blue-600 mr-2">{generateBrawlCode(module)}</span>}
                  
                  {showDoubleOption && !isSlot0 && module.category !== 'EMPTY' && (
                      <label className="flex items-center cursor-pointer mr-2" title="Double Module (+1pt)">
