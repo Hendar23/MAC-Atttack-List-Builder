@@ -245,12 +245,11 @@
                     <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
                 </svg>
             );
-            const IconCards = ({ size = 16, className = "" }) => (
+            const IconFilePlus = () => (
                 <svg
                     xmlns="http://www.w3.org/2000/svg"
-                    width={size}
-                    height={size}
-                    className={className}
+                    width="20"
+                    height="20"
                     viewBox="0 0 24 24"
                     fill="none"
                     stroke="currentColor"
@@ -258,9 +257,10 @@
                     strokeLinecap="round"
                     strokeLinejoin="round"
                 >
-                    <rect x="2" y="2" width="20" height="20" rx="2" />
-                    <path d="M8 2v20" />
-                    <path d="M16 2v20" />
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                    <polyline points="14 2 14 8 20 8" />
+                    <line x1="12" y1="18" x2="12" y2="12" />
+                    <line x1="9" y1="15" x2="15" y2="15" />
                 </svg>
             );
             const IconHelp = () => (
@@ -278,22 +278,6 @@
                     <circle cx="12" cy="12" r="10" />
                     <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
                     <path d="M12 17h.01" />
-                </svg>
-            );
-            const IconClose = () => (
-                <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="24"
-                    height="24"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                >
-                    <line x1="18" y1="6" x2="6" y2="18"></line>
-                    <line x1="6" y1="6" x2="18" y2="18"></line>
                 </svg>
             );
             const IconArrowUp = () => (
@@ -635,7 +619,7 @@
                 { name: "Transport", type: ["I"], rule: "Unit can Rush." },
                 { name: "Vent", type: ["M"], rule: "Hold = -2 Heat." },
                 // Faction Modules
-                { name: "Rampart", type: ["M"], rule: "Roll 2+ to ignore each hit if undamaged." },
+                { name: "Rampart", type: ["M"], rule: "Roll 2+ to ignore each hit to this module if undamaged." },
                 { name: "Extinguisher", type: ["M"], rule: "Cooldown: Take hit here to remove ALL Heat." },
                 { name: "Seeker", type: ["M"], rule: "Gain 1 Heat to give all attacks -1TN." },
                 { name: "Spire", type: ["M"], rule: "S-Range Pwr 1, No Type, Any Facing, 0 Heat." },
@@ -751,7 +735,7 @@
                 return 1;
             };
 
-            const checkValidation = (unit) => {
+            const checkValidation = (unit, variantRules) => {
                 const errors = [];
                 const typeInfo = UNIT_TYPES[unit.type];
 
@@ -845,6 +829,71 @@
                     errors.push(`Units can carry a maximum of 2 brawl weapons (Has ${brawlWeaponCount}).`);
                 }
 
+                // Hired MAC Dual Variant Validations
+                if (unit.isMerc && variantRules.hiredMercs && unit.variantModules && typeInfo.type === 'MAC') {
+                    let exactMatches = 0;
+                    let m2Used = Array(unit.variantModules.length).fill(false);
+                    let unmatchedM1 = [];
+                    
+                    for (let i = 0; i < unit.modules.length; i++) {
+                        const m1 = unit.modules[i];
+                        if (!m1) continue;
+                        const m1Check = { ...m1, customName: '' };
+                        let foundMatch = false;
+                        
+                        for (let j = 0; j < unit.variantModules.length; j++) {
+                            if (m2Used[j]) continue;
+                            const m2 = unit.variantModules[j];
+                            if (!m2) continue;
+                            const m2Check = { ...m2, customName: '' };
+                            
+                            if (JSON.stringify(m1Check) === JSON.stringify(m2Check)) {
+                                exactMatches++;
+                                m2Used[j] = true;
+                                foundMatch = true;
+                                break;
+                            }
+                        }
+                        
+                        if (!foundMatch) {
+                            unmatchedM1.push(m1);
+                        }
+                    }
+                    
+                    let unmatchedM2 = [];
+                    for (let j = 0; j < unit.variantModules.length; j++) {
+                        if (!m2Used[j] && unit.variantModules[j]) {
+                            unmatchedM2.push(unit.variantModules[j]);
+                        }
+                    }
+                    
+                    const getCat = (m) => (m.category === 'WEAPON' || m.category === 'BRAWL') ? 'WPN' : m.category;
+                    const cats1 = unmatchedM1.map(getCat).sort();
+                    const cats2 = unmatchedM2.map(getCat).sort();
+                    
+                    let categoryMatches = 0;
+                    if (cats1.length === cats2.length) {
+                        for (let k = 0; k < cats1.length; k++) {
+                            if (cats1[k] === cats2[k]) {
+                                categoryMatches++;
+                            }
+                        }
+                    }
+                    
+                    if (exactMatches !== 3) {
+                        errors.push(`Hired MACs must have exactly 3 identical modules between variants (Currently ${exactMatches}).`);
+                    }
+                    if (categoryMatches !== unmatchedM1.length) {
+                        errors.push(`Hired MAC variant modules must share the same category (Weapon/Brawl or Hardware) for the remaining non-identical modules.`);
+                    }
+                    
+                    let cost1 = calculateCost(unit);
+                    let cost2 = calculateCost({ ...unit, modules: unit.variantModules });
+                    if (cost1 !== cost2) {
+                        errors.push(`Hired MAC variants must have the same total point cost (Variant 1: ${cost1}pts, Variant 2: ${cost2}pts).`);
+                    }
+                }
+
                 return errors;
             };
 
@@ -915,6 +964,7 @@
                     card: unit.card || { suit: "", rank: "" },
                     count: unit.count || 1,
                     assetName: unit.assetName || REMOTE_ASSETS[0].name,
+                    variantModules: unit.variantModules || null,
                 };
             };
 
@@ -1332,9 +1382,51 @@
                 const fileInputRef = useRef(null);
                 const importUnitRef = useRef(null);
 
+                const [isLoaded, setIsLoaded] = useState(false);
+
                 useEffect(() => {
-                    if (units.length === 0) addUnit("MAC2");
+                    const savedData = localStorage.getItem('mac_attack_autosave');
+                    if (savedData) {
+                        try {
+                            const data = JSON.parse(savedData);
+                            if (data.forceName) setForceName(data.forceName);
+                            if (data.factionId) setFactionId(data.factionId);
+                            if (data.variantRules) setVariantRules(data.variantRules);
+                            if (data.hitStates) setHitStates(data.hitStates);
+                            if (data.destroyedStates) setDestroyedStates(data.destroyedStates);
+                            if (data.depletedStates) setDepletedStates(data.depletedStates);
+                            if (data.damageStates) setDamageStates(data.damageStates);
+                            
+                            if (data.units && data.units.length > 0) {
+                                setUnits(data.units.map(sanitizeUnit));
+                            } else {
+                                addUnit("MAC2");
+                            }
+                        } catch (e) {
+                            console.warn("Could not parse autosave data.", e);
+                            addUnit("MAC2");
+                        }
+                    } else {
+                        addUnit("MAC2");
+                    }
+                    setIsLoaded(true);
                 }, []);
+
+                useEffect(() => {
+                    if (isLoaded) {
+                        const dataToSave = { 
+                            forceName, 
+                            factionId, 
+                            units, 
+                            variantRules,
+                            hitStates,
+                            destroyedStates,
+                            depletedStates,
+                            damageStates
+                        };
+                        localStorage.setItem('mac_attack_autosave', JSON.stringify(dataToSave));
+                    }
+                }, [forceName, factionId, units, variantRules, hitStates, destroyedStates, depletedStates, damageStates, isLoaded]);
 
                 const toggleHit = (unitId, modIndex) => {
                     setHitStates((prev) => {
@@ -1399,6 +1491,7 @@
                             flaws: "",
                             card: { suit: globalSuit, rank: nextRank },
                             modules: createDefaultModules(typeId, factionId, false),
+                            variantModules: null,
                             count: 1,
                         };
                         return [...prevUnits, newUnit];
@@ -1439,6 +1532,7 @@
                                 const newTypeInfo = UNIT_TYPES[value];
                                 if (oldTypeInfo.type !== newTypeInfo.type || newTypeInfo.type !== "MAC") {
                                     newUnit.modules = createDefaultModules(value, factionId, u.isMerc);
+                                    if (newUnit.isMerc) newUnit.variantModules = JSON.parse(JSON.stringify(newUnit.modules));
                                 }
 
                                 return sanitizeUnit(newUnit);
@@ -1469,7 +1563,13 @@
                                         });
                                     }
                                 }
-                                return { ...u, isMerc: isNowMerc, modules: newModules };
+                                
+                                let newVariantModules = u.variantModules;
+                                if (isNowMerc && !newVariantModules) {
+                                    newVariantModules = JSON.parse(JSON.stringify(newModules));
+                                }
+                                
+                                return { ...u, isMerc: isNowMerc, modules: newModules, variantModules: newVariantModules };
                             }
 
                             return { ...u, [field]: value };
@@ -1477,10 +1577,15 @@
                     });
                 };
 
-                const updateModule = (unitId, modIndex, newModule) => {
+                const updateModule = (unitId, modIndex, newModule, isVariant = false) => {
                     setUnits(
                         units.map((u) => {
                             if (u.id !== unitId) return u;
+                            if (isVariant) {
+                                const newVariants = [...u.variantModules];
+                                newVariants[modIndex] = newModule;
+                                return { ...u, variantModules: newVariants };
+                            }
                             const newModules = [...u.modules];
                             newModules[modIndex] = newModule;
                             return { ...u, modules: newModules };
@@ -1488,16 +1593,17 @@
                     );
                 };
 
-                const cloneModule = (unitId, sourceIndex) => {
+                const cloneModule = (unitId, sourceIndex, isVariant = false) => {
                     setUnits(
                         units.map((u) => {
                             if (u.id !== unitId) return u;
-                            const sourceMod = u.modules[sourceIndex];
+                            const targetArray = isVariant ? u.variantModules : u.modules;
+                            const sourceMod = targetArray[sourceIndex];
                             if (sourceMod.isSlot0) return u;
 
-                            const newModules = [...u.modules];
+                            const newModules = [...targetArray];
                             if (UNIT_TYPES[u.type].type === "AU") {
-                                return { ...u, modules: [...u.modules, { ...sourceMod }] };
+                                return isVariant ? { ...u, variantModules: [...newModules, { ...sourceMod }] } : { ...u, modules: [...newModules, { ...sourceMod }] };
                             }
                             for (let i = 0; i < newModules.length; i++) {
                                 if (
@@ -1509,23 +1615,23 @@
                                     break;
                                 }
                             }
-                            return { ...u, modules: newModules };
+                            return isVariant ? { ...u, variantModules: newModules } : { ...u, modules: newModules };
                         })
                     );
                 };
 
-                const moveModule = (unitId, index, direction) => {
+                const moveModule = (unitId, index, direction, isVariant = false) => {
                     setUnits(
                         units.map((u) => {
                             if (u.id !== unitId) return u;
-                            const newModules = [...u.modules];
+                            const newModules = isVariant ? [...u.variantModules] : [...u.modules];
                             if (direction === -1 && index > 0) {
                                 if (newModules[index - 1].isSlot0) return u;
                                 [newModules[index - 1], newModules[index]] = [newModules[index], newModules[index - 1]];
                             } else if (direction === 1 && index < newModules.length - 1) {
                                 [newModules[index + 1], newModules[index]] = [newModules[index], newModules[index + 1]];
                             }
-                            return { ...u, modules: newModules };
+                            return isVariant ? { ...u, variantModules: newModules } : { ...u, modules: newModules };
                         })
                     );
                 };
@@ -1582,6 +1688,7 @@
                             pilot: { ...unit.pilot, isCommander: false },
                             card: { suit: globalSuit, rank: nextRank },
                             modules: unit.modules ? JSON.parse(JSON.stringify(unit.modules)) : [],
+                            variantModules: unit.variantModules ? JSON.parse(JSON.stringify(unit.variantModules)) : null,
                         });
                         return [...prevUnits, newUnit];
                     });
@@ -1648,6 +1755,36 @@
 
                 const toggleVariantRule = (ruleKey) => {
                     setVariantRules((prev) => ({ ...prev, [ruleKey]: !prev[ruleKey] }));
+                };
+
+                const handleNewForce = () => {
+                    if (window.confirm("Are you sure you want to start a new force? All unsaved progress will be lost.")) {
+                        setForceName("New Force");
+                        setFactionId("NONE");
+                        
+                        const newUnit = {
+                            id: Date.now() + Math.random(),
+                            name: "Unit 1",
+                            type: "MAC2",
+                            division: "A",
+                            assetName: REMOTE_ASSETS[0].name,
+                            image: null,
+                            isMerc: false,
+                            pilot: { name: "", type: "Standard", trick: "", isCommander: false, drill: "" },
+                            perks: "",
+                            flaws: "",
+                            card: { suit: "", rank: "" },
+                            modules: createDefaultModules("MAC2", "NONE", false),
+                            variantModules: null,
+                            count: 1,
+                        };
+                        
+                        setUnits([newUnit]);
+                        setHitStates({});
+                        setDestroyedStates({});
+                        setDepletedStates({});
+                        setDamageStates({});
+                    }
                 };
 
                 const handleSave = () => {
@@ -1838,6 +1975,7 @@
                 const divCounts = { A: 0, B: 0, C: 0 };
                 const divMacs = { A: 0, B: 0, C: 0 };
                 let commanderDiv = null;
+                let commanderCount = 0;
                 const unitNameByCard = new Map();
 
                 deployableUnits.forEach((u) => {
@@ -1847,6 +1985,7 @@
                         divMacs[div] = (divMacs[div] || 0) + 1;
                     }
                     if (u.pilot?.isCommander) {
+                        commanderCount++;
                         commanderDiv = div;
                         if (UNIT_TYPES[u.type]?.type !== "MAC") {
                             forceErrors.push(
@@ -1875,6 +2014,14 @@
                             forceErrors.push(`Division ${div} must contain at least one MAC.`);
                         }
                     });
+                }
+
+                if (totalMacs > 0) {
+                    if (commanderCount === 0) {
+                        forceErrors.push("The force must specify exactly one MAC as the Commander.");
+                    } else if (commanderCount > 1) {
+                        forceErrors.push(`The force can only have one Commander (currently has ${commanderCount}).`);
+                    }
                 }
 
                 if (commanderDiv && commanderDiv !== "A") {
@@ -1931,7 +2078,6 @@
                                     const typeInfo = UNIT_TYPES[u.type];
                                     const isMac = typeInfo.type === "MAC";
                                     const isAsset = typeInfo.type === "ASSET";
-                                    let slotCounter = 1;
                                     const count = u.count || 1;
 
                                     const cardSuit = u.card?.suit ? SUITS.find((s) => s.name === u.card.suit) : null;
@@ -1960,6 +2106,136 @@
                                     if (isMac && factionId === "ARKSWORN" && !u.isMerc) {
                                         currentIntDmg += 1;
                                     }
+
+                                    const renderTable = (modulesToRender, variantLabel) => {
+                                        let slotCounter = 1;
+                                        return (
+                                            <div className="grow">
+                                                {variantLabel && (
+                                                    <div className="bg-gray-200 font-bold uppercase text-xs p-1 text-center border-b-2 border-black text-black">
+                                                        {variantLabel}
+                                                    </div>
+                                                )}
+                                                <table className="w-full text-sm border-collapse">
+                                                    <thead>
+                                                        <tr className="border-b-2 border-black text-left">
+                                                            <th className="p-2 w-8 text-center font-bold">#</th>
+                                                            <th className="p-2 font-bold">Module</th>
+                                                            <th className="p-2 font-bold">Notes</th>
+                                                            {isMac && (
+                                                                <th className="p-2 w-10 text-center font-bold">Hit</th>
+                                                            )}
+                                                            {isMac && (
+                                                                <th className="p-2 w-10 text-center font-bold">Dst</th>
+                                                            )}
+                                                            <th className="p-2 w-10 text-center font-bold">Dep</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        {modulesToRender.map((mod, i) => {
+                                                            let code = "";
+                                                            let notes = getModuleRule(mod);
+
+                                                            if (mod.category === "WEAPON")
+                                                                code = generateWeaponCode(mod);
+                                                            else if (mod.category === "BRAWL") {
+                                                                code = generateBrawlCode(mod);
+                                                            } else if (mod.category === "HW")
+                                                                code = mod.hwName;
+                                                            else {
+                                                                code = "";
+                                                                notes = "";
+                                                            }
+
+                                                            if (mod.isDouble) code = `2x ${code}`;
+                                                            const isHit = hitStates[u.id]?.[i];
+                                                            const isDestroyed = destroyedStates[u.id]?.[i];
+                                                            const isExpendable = mod.expendable;
+                                                            const depletedCount =
+                                                                depletedStates[u.id]?.[i] || 0;
+                                                            let displayNum = mod.isSlot0
+                                                                ? "O"
+                                                                : slotCounter++;
+
+                                                            let label = mod.customName ? (
+                                                                <div>
+                                                                    <span className="block font-bold">
+                                                                        {mod.customName}
+                                                                    </span>
+                                                                    <span className="text-xs text-slate-500 font-mono">
+                                                                        {code}
+                                                                    </span>
+                                                                </div>
+                                                            ) : (
+                                                                <span className="font-bold">{code}</span>
+                                                            );
+
+                                                            return (
+                                                                <tr
+                                                                    key={i}
+                                                                    className={`border-b border-gray-300 last:border-0 h-10 ${mod.isSlot0 ? "bg-gray-100" : ""}`}
+                                                                >
+                                                                    <td className="p-2 text-center font-bold text-gray-400 border-r border-gray-200">
+                                                                        {displayNum}
+                                                                    </td>
+                                                                    <td className="p-2 font-bold border-r border-gray-200">
+                                                                        {label}
+                                                                    </td>
+                                                                    <td className="p-2 text-gray-600 text-xs leading-tight border-r border-gray-200">
+                                                                        {notes}
+                                                                    </td>
+                                                                    {isMac && (
+                                                                        <td
+                                                                            className="p-2 text-center align-middle cursor-pointer hover:bg-gray-50"
+                                                                            onClick={() => toggleHit(u.id, i)}
+                                                                        >
+                                                                            <div
+                                                                                className={`w-4 h-4 border-2 border-gray-400 rounded-full mx-auto ${isHit ? "bg-black border-black" : "bg-white"}`}
+                                                                            ></div>
+                                                                        </td>
+                                                                    )}
+                                                                    {isMac && (
+                                                                        <td
+                                                                            className="p-2 text-center align-middle cursor-pointer hover:bg-gray-50"
+                                                                            onClick={() => toggleDestroyed(u.id, i)}
+                                                                        >
+                                                                            <div
+                                                                                className={`w-4 h-4 border-2 border-gray-400 rounded-sm mx-auto ${isDestroyed ? "bg-red-600 border-red-600" : "bg-white"}`}
+                                                                            ></div>
+                                                                        </td>
+                                                                    )}
+                                                                    <td
+                                                                        className="p-2 text-center align-middle cursor-pointer hover:bg-gray-50"
+                                                                        onClick={() =>
+                                                                            isExpendable &&
+                                                                            toggleDepleted(
+                                                                                u.id,
+                                                                                i,
+                                                                                mod.isDouble
+                                                                            )
+                                                                        }
+                                                                    >
+                                                                        {isExpendable && (
+                                                                            <div className="flex gap-1 justify-center">
+                                                                                <div
+                                                                                    className={`w-3 h-3 border-2 border-amber-500 rounded-sm ${depletedCount >= 1 ? "bg-amber-500" : "bg-white"}`}
+                                                                                ></div>
+                                                                                {mod.isDouble && (
+                                                                                    <div
+                                                                                        className={`w-3 h-3 border-2 border-amber-500 rounded-sm ${depletedCount >= 2 ? "bg-amber-500" : "bg-white"}`}
+                                                                                    ></div>
+                                                                                )}
+                                                                            </div>
+                                                                        )}
+                                                                    </td>
+                                                                </tr>
+                                                            );
+                                                        })}
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        );
+                                    };
 
                                     return (
                                         <div
@@ -2096,147 +2372,24 @@
                                                 </div>
                                             )}
 
-                                            <div className="flex">
+                                            <div className="flex flex-col w-full">
                                                 {isAsset ? (
-                                                    <div className="p-4 bg-gray-50 grow">
+                                                    <div className="p-4 bg-gray-50 grow w-full border-b-2 border-black">
                                                         <div className="font-black text-lg mb-1">{u.assetName}</div>
                                                         <div className="text-sm italic text-gray-700">
                                                             {REMOTE_ASSETS.find((a) => a.name === u.assetName)?.rule}
                                                         </div>
                                                     </div>
                                                 ) : (
-                                                    <>
-                                                        <div className="grow">
-                                                            <table className="w-full text-sm border-collapse">
-                                                                <thead>
-                                                                    <tr className="border-b-2 border-black text-left">
-                                                                        <th className="p-2 w-8 text-center font-bold">
-                                                                            #
-                                                                        </th>
-                                                                        <th className="p-2 font-bold">Module</th>
-                                                                        <th className="p-2 font-bold">Notes</th>
-                                                                        {isMac && (
-                                                                            <th className="p-2 w-10 text-center font-bold">
-                                                                                Hit
-                                                                            </th>
-                                                                        )}
-                                                                        {isMac && (
-                                                                            <th className="p-2 w-10 text-center font-bold">
-                                                                                Dst
-                                                                            </th>
-                                                                        )}
-                                                                        <th className="p-2 w-10 text-center font-bold">
-                                                                            Dep
-                                                                        </th>
-                                                                    </tr>
-                                                                </thead>
-                                                                <tbody>
-                                                                    {u.modules.map((mod, i) => {
-                                                                        let code = "";
-                                                                        let notes = getModuleRule(mod);
-
-                                                                        if (mod.category === "WEAPON")
-                                                                            code = generateWeaponCode(mod);
-                                                                        else if (mod.category === "BRAWL") {
-                                                                            code = generateBrawlCode(mod);
-                                                                        } else if (mod.category === "HW")
-                                                                            code = mod.hwName;
-                                                                        else {
-                                                                            code = "";
-                                                                            notes = "";
-                                                                        }
-
-                                                                        if (mod.isDouble) code = `2x ${code}`;
-                                                                        const isHit = hitStates[u.id]?.[i];
-                                                                        const isDestroyed = destroyedStates[u.id]?.[i];
-                                                                        const isExpendable = mod.expendable;
-                                                                        const depletedCount =
-                                                                            depletedStates[u.id]?.[i] || 0;
-                                                                        let displayNum = mod.isSlot0
-                                                                            ? "O"
-                                                                            : slotCounter++;
-
-                                                                        let label = mod.customName ? (
-                                                                            <div>
-                                                                                <span className="block font-bold">
-                                                                                    {mod.customName}
-                                                                                </span>
-                                                                                <span className="text-xs text-slate-500 font-mono">
-                                                                                    {code}
-                                                                                </span>
-                                                                            </div>
-                                                                        ) : (
-                                                                            <span className="font-bold">{code}</span>
-                                                                        );
-
-                                                                        return (
-                                                                            <tr
-                                                                                key={i}
-                                                                                className={`border-b border-gray-300 last:border-0 h-10 ${mod.isSlot0 ? "bg-gray-100" : ""}`}
-                                                                            >
-                                                                                <td className="p-2 text-center font-bold text-gray-400 border-r border-gray-200">
-                                                                                    {displayNum}
-                                                                                </td>
-                                                                                <td className="p-2 font-bold border-r border-gray-200">
-                                                                                    {label}
-                                                                                </td>
-                                                                                <td className="p-2 text-gray-600 text-xs leading-tight border-r border-gray-200">
-                                                                                    {notes}
-                                                                                </td>
-                                                                                {isMac && (
-                                                                                    <td
-                                                                                        className="p-2 text-center align-middle cursor-pointer hover:bg-gray-50"
-                                                                                        onClick={() =>
-                                                                                            toggleHit(u.id, i)
-                                                                                        }
-                                                                                    >
-                                                                                        <div
-                                                                                            className={`w-4 h-4 border-2 border-gray-400 rounded-full mx-auto ${isHit ? "bg-black border-black" : "bg-white"}`}
-                                                                                        ></div>
-                                                                                    </td>
-                                                                                )}
-                                                                                {isMac && (
-                                                                                    <td
-                                                                                        className="p-2 text-center align-middle cursor-pointer hover:bg-gray-50"
-                                                                                        onClick={() =>
-                                                                                            toggleDestroyed(u.id, i)
-                                                                                        }
-                                                                                    >
-                                                                                        <div
-                                                                                            className={`w-4 h-4 border-2 border-gray-400 rounded-sm mx-auto ${isDestroyed ? "bg-red-600 border-red-600" : "bg-white"}`}
-                                                                                        ></div>
-                                                                                    </td>
-                                                                                )}
-                                                                                <td
-                                                                                    className="p-2 text-center align-middle cursor-pointer hover:bg-gray-50"
-                                                                                    onClick={() =>
-                                                                                        isExpendable &&
-                                                                                        toggleDepleted(
-                                                                                            u.id,
-                                                                                            i,
-                                                                                            mod.isDouble
-                                                                                        )
-                                                                                    }
-                                                                                >
-                                                                                    {isExpendable && (
-                                                                                        <div className="flex gap-1 justify-center">
-                                                                                            <div
-                                                                                                className={`w-3 h-3 border-2 border-amber-500 rounded-sm ${depletedCount >= 1 ? "bg-amber-500" : "bg-white"}`}
-                                                                                            ></div>
-                                                                                            {mod.isDouble && (
-                                                                                                <div
-                                                                                                    className={`w-3 h-3 border-2 border-amber-500 rounded-sm ${depletedCount >= 2 ? "bg-amber-500" : "bg-white"}`}
-                                                                                                ></div>
-                                                                                            )}
-                                                                                        </div>
-                                                                                    )}
-                                                                                </td>
-                                                                            </tr>
-                                                                        );
-                                                                    })}
-                                                                </tbody>
-                                                            </table>
-                                                        </div>
+                                                    <div className="flex w-full">
+                                                        {u.isMerc && variantRules.hiredMercs && u.variantModules ? (
+                                                            <div className="flex flex-col gap-0 w-full">
+                                                                {renderTable(u.modules, "Variant 1")}
+                                                                {renderTable(u.variantModules, "Variant 2")}
+                                                            </div>
+                                                        ) : (
+                                                            <div className="w-full">{renderTable(u.modules, null)}</div>
+                                                        )}
                                                         <div className="w-32 border-l-2 border-black flex flex-col shrink-0 bg-gray-50">
                                                             <div className="grow relative flex items-center justify-center overflow-hidden min-h-[240px]">
                                                                 {u.image ? (
@@ -2251,7 +2404,7 @@
                                                                 )}
                                                             </div>
                                                         </div>
-                                                    </>
+                                                    </div>
                                                 )}
                                             </div>
                                         </div>
@@ -2373,6 +2526,9 @@
                                             <path d="M6 18V4" />
                                         </svg>
                                     </button>
+                                    <button onClick={handleNewForce} className={BTN_TOOL_CLASS} title="New Force">
+                                        <IconFilePlus />
+                                    </button>
                                     <button onClick={copyToClipboard} className={BTN_TOOL_CLASS} title="Copy Text">
                                         <IconClipboard />
                                     </button>
@@ -2396,7 +2552,7 @@
                                     <button
                                         onClick={() => setIsPrintMode(true)}
                                         className={BTN_TOOL_CLASS}
-                                        title="Print"
+                                        title="Print/Play"
                                     >
                                         <IconPrinter />
                                     </button>
@@ -2438,7 +2594,7 @@
                                 const typeInfo = UNIT_TYPES[unit.type];
                                 if (!typeInfo) return null;
                                 const cost = calculateCost(unit);
-                                const errors = checkValidation(unit);
+                                const errors = checkValidation(unit, variantRules);
 
                                 const isMac = typeInfo.type === "MAC";
                                 const isInf = typeInfo.id === "INF";
@@ -2793,6 +2949,11 @@
                                             </div>
                                         ) : (
                                             <div className="p-4">
+                                                {unit.isMerc && variantRules.hiredMercs && (
+                                                    <div className="bg-slate-200 text-slate-700 font-bold px-4 py-2 uppercase text-xs mb-2 border border-slate-300 rounded-t">
+                                                        Variant 1 (Primary)
+                                                    </div>
+                                                )}
                                                 {unit.modules &&
                                                     unit.modules.map((mod, i) => {
                                                         const displayIndex = mod.isSlot0 ? "O" : slotCounter++;
@@ -2801,7 +2962,7 @@
                                                         const isLastMovable = i === unit.modules.length - 1;
                                                         return (
                                                             <ModuleEditor
-                                                                key={i}
+                                                                key={`m-${i}`}
                                                                 index={i}
                                                                 displayIndex={displayIndex}
                                                                 module={mod}
@@ -2813,15 +2974,53 @@
                                                                 isFirstMovable={isFirstMovable}
                                                                 isLastMovable={isLastMovable}
                                                                 onChange={(idx, newMod) =>
-                                                                    updateModule(unit.id, idx, newMod)
+                                                                    updateModule(unit.id, idx, newMod, false)
                                                                 }
                                                                 onDelete={(idx) => removeModuleSlot(unit.id, idx)}
-                                                                onClone={(idx) => cloneModule(unit.id, idx)}
-                                                                onMoveUp={() => moveModule(unit.id, i, -1)}
-                                                                onMoveDown={() => moveModule(unit.id, i, 1)}
+                                                                onClone={(idx) => cloneModule(unit.id, idx, false)}
+                                                                onMoveUp={() => moveModule(unit.id, i, -1, false)}
+                                                                onMoveDown={() => moveModule(unit.id, i, 1, false)}
                                                             />
                                                         );
                                                     })}
+                                                    
+                                                {unit.isMerc && variantRules.hiredMercs && unit.variantModules && (
+                                                    <>
+                                                        <div className="bg-slate-200 text-slate-700 font-bold px-4 py-2 uppercase text-xs mt-6 mb-2 border border-slate-300 rounded-t">
+                                                            Variant 2
+                                                        </div>
+                                                        {unit.variantModules.map((mod, i) => {
+                                                            let vSlotCounter = unit.variantModules[0]?.isSlot0 ? 0 : 1;
+                                                            for (let v = 0; v < i; v++) if (!unit.variantModules[v].isSlot0) vSlotCounter++;
+                                                            const displayIndex = mod.isSlot0 ? "O" : vSlotCounter;
+                                                            const isFirstMovable = i === 0 || (unit.variantModules[0].isSlot0 && i === 1);
+                                                            const isLastMovable = i === unit.variantModules.length - 1;
+                                                            return (
+                                                                <ModuleEditor
+                                                                    key={`v-${i}`}
+                                                                    index={i}
+                                                                    displayIndex={displayIndex}
+                                                                    module={mod}
+                                                                    unitType={unit.type}
+                                                                    isMac={isMac}
+                                                                    availableHardware={availableHW}
+                                                                    availableBrawlWeapons={availableBrawl}
+                                                                    showDoubleOption={variantRules.doubleModules}
+                                                                    isFirstMovable={isFirstMovable}
+                                                                    isLastMovable={isLastMovable}
+                                                                    onChange={(idx, newMod) =>
+                                                                        updateModule(unit.id, idx, newMod, true)
+                                                                    }
+                                                                    onDelete={() => {}} // Slots cannot be deleted on hired macs
+                                                                    onClone={(idx) => cloneModule(unit.id, idx, true)}
+                                                                    onMoveUp={() => moveModule(unit.id, i, -1, true)}
+                                                                    onMoveDown={() => moveModule(unit.id, i, 1, true)}
+                                                                />
+                                                            );
+                                                        })}
+                                                    </>
+                                                )}
+                                                
                                                 {!isMac && (
                                                     <button
                                                         onClick={() => addModuleSlot(unit.id)}
