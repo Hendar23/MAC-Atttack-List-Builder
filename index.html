@@ -191,12 +191,29 @@
                     strokeLinecap="round"
                     strokeLinejoin="round"
                 >
+                    <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" />
+                    <polyline points="17 21 17 13 7 13 7 21" />
+                    <polyline points="7 3 7 8 15 8" />
+                </svg>
+            );
+            const IconDownload = ({ size = 20 }) => (
+                <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width={size}
+                    height={size}
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                >
                     <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
                     <polyline points="7 10 12 15 17 10" />
                     <line x1="12" y1="15" x2="12" y2="3" />
                 </svg>
             );
-            const IconLoad = ({ size = 20 }) => (
+            const IconUpload = ({ size = 20 }) => (
                 <svg
                     xmlns="http://www.w3.org/2000/svg"
                     width={size}
@@ -261,6 +278,59 @@
                     <polyline points="14 2 14 8 20 8" />
                     <line x1="12" y1="18" x2="12" y2="12" />
                     <line x1="9" y1="15" x2="15" y2="15" />
+                </svg>
+            );
+            const IconDatabaseWipe = ({ size = 20 }) => (
+                <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width={size}
+                    height={size}
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                >
+                    <ellipse cx="12" cy="5" rx="9" ry="3" />
+                    <path d="M3 5v14c0 1.66 4 3 9 3" />
+                    <path d="M21 5v4" />
+                    <line x1="15" y1="15" x2="21" y2="21" />
+                    <line x1="21" y1="15" x2="15" y2="21" />
+                </svg>
+            );
+            const IconDatabase = () => (
+                <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                >
+                    <ellipse cx="12" cy="5" rx="9" ry="3" />
+                    <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3" />
+                    <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5" />
+                </svg>
+            );
+            const IconMerge = ({ size = 20 }) => (
+                <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width={size}
+                    height={size}
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                >
+                    <circle cx="18" cy="18" r="3"></circle>
+                    <circle cx="6" cy="6" r="3"></circle>
+                    <path d="M6 21V9a9 9 0 0 0 9 9"></path>
                 </svg>
             );
             const IconHelp = () => (
@@ -352,7 +422,7 @@
                 },
                 {
                     id: "DYNAPOLIS",
-                    name: "Dynapolis",
+                    name: "Dynapolis Foresight",
                     ruleName: "Temporal Overclocking",
                     rule: "1/turn reroll any attack dice. 1-3 on reroll = 1 Heat.",
                     module: "Halo",
@@ -648,21 +718,23 @@
                 return "";
             };
 
-            const generateWeaponCode = (w) => {
+            const generateWeaponCode = (w, useDouble = true) => {
                 if (!w.range || !w.type || !w.power) return "---";
-                return `${w.isDouble ? "2x " : ""}${w.range}${w.type}${w.power}${generateSubTypeCode(w)}`;
+                const isDouble = useDouble && w.isDouble;
+                return `${isDouble ? "2x " : ""}${w.range}${w.type}${w.power}${generateSubTypeCode(w)}`;
             };
 
-            const generateBrawlCode = (b) => {
+            const generateBrawlCode = (b, useDouble = true) => {
                 if (!b.brawlId) {
                     return "---";
                 }
-                return `${b.isDouble ? "2x " : ""}${b.brawlId}${generateSubTypeCode(b)}`;
+                const isDouble = useDouble && b.isDouble;
+                return `${isDouble ? "2x " : ""}${b.brawlId}${generateSubTypeCode(b)}`;
             };
 
-            const getModuleRule = (mod) => {
+            const getModuleRule = (mod, useDouble = true) => {
                 let parts = [];
-                if (mod.isDouble) parts.push("DOUBLE: Two in one slot (+1pt)");
+                if (useDouble && mod.isDouble) parts.push("DOUBLE: Two in one slot (+1pt)");
                 if (mod.category === "WEAPON") {
                     const r = WEAPON_RANGES.find((x) => x.id === mod.range);
                     const t = WEAPON_TYPES.find((x) => x.id === mod.type);
@@ -688,7 +760,7 @@
                 return parts.join(" | ");
             };
 
-            const calculateCost = (unit) => {
+            const calculateCost = (unit, useDouble = true) => {
                 const typeInfo = UNIT_TYPES[unit.type];
                 if (!typeInfo) return 0;
 
@@ -715,7 +787,7 @@
                             weaponPowerSum += 1;
                         }
 
-                        if (mod.isDouble) {
+                        if (useDouble && mod.isDouble) {
                             cost += 1;
                         }
                     });
@@ -731,7 +803,6 @@
             const getFormationLimit = (typeId) => {
                 if (typeId === "INF") return 5;
                 if (typeId === "VEH") return 3;
-                if (typeId === "REMOTE") return 3; // Allowing multiple asset stacks
                 return 1;
             };
 
@@ -781,12 +852,12 @@
                 unit.modules.forEach((mod) => {
                     let key = null;
                     if (mod.category === "WEAPON")
-                        key = generateWeaponCode(mod).replace("2x ", ""); // Base key only
+                        key = generateWeaponCode(mod, false); // Base key only
                     else if (mod.category === "HW") key = mod.hwName;
                     else if (mod.category === "BRAWL") key = mod.brawlId;
 
                     if (key && mod.category !== "EMPTY") {
-                        const increment = mod.isDouble ? 2 : 1;
+                        const increment = (variantRules.doubleModules && mod.isDouble) ? 2 : 1;
                         counts[key] = (counts[key] || 0) + increment;
                     }
                 });
@@ -887,8 +958,8 @@
                         errors.push(`Hired MAC variant modules must share the same category (Weapon/Brawl or Hardware) for the remaining non-identical modules.`);
                     }
                     
-                    let cost1 = calculateCost(unit);
-                    let cost2 = calculateCost({ ...unit, modules: unit.variantModules });
+                    let cost1 = calculateCost(unit, variantRules.doubleModules);
+                    let cost2 = calculateCost({ ...unit, modules: unit.variantModules }, variantRules.doubleModules);
                     if (cost1 !== cost2) {
                         errors.push(`Hired MAC variants must have the same total point cost (Variant 1: ${cost1}pts, Variant 2: ${cost2}pts).`);
                     }
@@ -977,8 +1048,37 @@
                     const file = e.target.files[0];
                     if (file) {
                         const reader = new FileReader();
-                        reader.onloadend = () => {
-                            onImageChange(reader.result);
+                        reader.onload = (event) => {
+                            const img = new Image();
+                            img.onload = () => {
+                                const canvas = document.createElement('canvas');
+                                const MAX_SIZE = 400; // Constrain maximum dimensions
+                                let width = img.width;
+                                let height = img.height;
+
+                                // Calculate new dimensions while maintaining aspect ratio
+                                if (width > height && width > MAX_SIZE) {
+                                    height *= MAX_SIZE / width;
+                                    width = MAX_SIZE;
+                                } else if (height > MAX_SIZE) {
+                                    width *= MAX_SIZE / height;
+                                    height = MAX_SIZE;
+                                }
+
+                                canvas.width = width;
+                                canvas.height = height;
+                                const ctx = canvas.getContext('2d');
+                                
+                                // Fill a white background to prevent transparent PNGs from turning black
+                                ctx.fillStyle = "#ffffff";
+                                ctx.fillRect(0, 0, width, height);
+                                ctx.drawImage(img, 0, 0, width, height);
+                                
+                                // Export as a highly compressed JPEG (70% quality)
+                                const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.7);
+                                onImageChange(compressedDataUrl);
+                            };
+                            img.src = event.target.result;
                         };
                         reader.readAsDataURL(file);
                     }
@@ -1034,7 +1134,7 @@
             }) => {
                 const typeInfo = UNIT_TYPES[unitType];
                 const isAu = typeInfo.type === "AU";
-                const ruleText = getModuleRule(module);
+                const ruleText = getModuleRule(module, showDoubleOption);
                 const isSlot0 = module.isSlot0;
 
                 // Local state for the weapon code parser
@@ -1314,12 +1414,12 @@
                         <div className="flex items-center gap-2 min-w-[60px] justify-end ml-auto lg:ml-0 opacity-50 group-hover:opacity-100 transition-opacity font-sans">
                             {module.category === "WEAPON" && (
                                 <span className="font-mono font-bold text-blue-600 mr-2">
-                                    {generateWeaponCode(module)}
+                                    {generateWeaponCode(module, showDoubleOption)}
                                 </span>
                             )}
                             {module.category === "BRAWL" && (
                                 <span className="font-mono font-bold text-blue-600 mr-2">
-                                    {generateBrawlCode(module)}
+                                    {generateBrawlCode(module, showDoubleOption)}
                                 </span>
                             )}
 
@@ -1365,10 +1465,21 @@
                 const [units, setUnits] = useState([]);
                 const [isPrintMode, setIsPrintMode] = useState(false);
                 const [showHelp, setShowHelp] = useState(false);
+                
                 const [hitStates, setHitStates] = useState({});
                 const [destroyedStates, setDestroyedStates] = useState({});
                 const [depletedStates, setDepletedStates] = useState({});
                 const [damageStates, setDamageStates] = useState({});
+
+                // Workspace Libraries
+                const [forceLibrary, setForceLibrary] = useState([]);
+                const [unitLibrary, setUnitLibrary] = useState([]);
+                const [isForceLibraryOpen, setIsForceLibraryOpen] = useState(false);
+                const [isUnitLibraryOpen, setIsUnitLibraryOpen] = useState(false);
+                const [isLoaded, setIsLoaded] = useState(false);
+                const [storageError, setStorageError] = useState(false);
+
+                // Feature Flags
 
                 // Feature Flags
                 const [variantRules, setVariantRules] = useState({
@@ -1379,55 +1490,80 @@
                     doubleModules: false,
                 });
 
-                const fileInputRef = useRef(null);
-                const importUnitRef = useRef(null);
-
-                const [isLoaded, setIsLoaded] = useState(false);
+                const importWorkspaceRef = useRef(null);
+                const mergeWorkspaceRef = useRef(null);
 
                 useEffect(() => {
                     const savedData = localStorage.getItem('mac_attack_autosave');
                     if (savedData) {
                         try {
                             const data = JSON.parse(savedData);
-                            if (data.forceName) setForceName(data.forceName);
-                            if (data.factionId) setFactionId(data.factionId);
-                            if (data.variantRules) setVariantRules(data.variantRules);
-                            if (data.hitStates) setHitStates(data.hitStates);
-                            if (data.destroyedStates) setDestroyedStates(data.destroyedStates);
-                            if (data.depletedStates) setDepletedStates(data.depletedStates);
-                            if (data.damageStates) setDamageStates(data.damageStates);
-                            
-                            if (data.units && data.units.length > 0) {
-                                setUnits(data.units.map(sanitizeUnit));
+                            if (data.activeForce) {
+                                setForceName(data.activeForce.forceName || "New Force");
+                                setFactionId(data.activeForce.factionId || "NONE");
+                                setVariantRules(data.activeForce.variantRules || {
+                                    remoteAssets: false, hiredMercs: false, perksFlaws: false, pilots: false, doubleModules: false
+                                });
+                                setHitStates(data.activeForce.hitStates || {});
+                                setDestroyedStates(data.activeForce.destroyedStates || {});
+                                setDepletedStates(data.activeForce.depletedStates || {});
+                                setDamageStates(data.activeForce.damageStates || {});
+                                setUnits(data.activeForce.units && data.activeForce.units.length > 0 ? data.activeForce.units.map(sanitizeUnit) : []);
                             } else {
-                                addUnit("MAC2");
+                                // Fallback for previous save format
+                                if (data.forceName) setForceName(data.forceName);
+                                if (data.factionId) setFactionId(data.factionId);
+                                if (data.variantRules) setVariantRules(data.variantRules);
+                                if (data.hitStates) setHitStates(data.hitStates);
+                                if (data.destroyedStates) setDestroyedStates(data.destroyedStates);
+                                if (data.depletedStates) setDepletedStates(data.depletedStates);
+                                if (data.damageStates) setDamageStates(data.damageStates);
+                                if (data.units && data.units.length > 0) setUnits(data.units.map(sanitizeUnit));
                             }
+
+                            if (data.forceLibrary) setForceLibrary(data.forceLibrary);
+                            if (data.unitLibrary) setUnitLibrary(data.unitLibrary);
+
                         } catch (e) {
                             console.warn("Could not parse autosave data.", e);
-                            addUnit("MAC2");
                         }
-                    } else {
-                        addUnit("MAC2");
                     }
                     setIsLoaded(true);
                 }, []);
 
                 useEffect(() => {
+                    // Ensure at least one unit exists if loaded but empty
+                    if (isLoaded && units.length === 0) {
+                        addUnit("MAC2");
+                    }
+                }, [isLoaded, units]);
+
+                useEffect(() => {
                     if (isLoaded) {
                         const dataToSave = { 
-                            forceName, 
-                            factionId, 
-                            units, 
-                            variantRules,
-                            hitStates,
-                            destroyedStates,
-                            depletedStates,
-                            damageStates
+                            activeForce: {
+                                forceName, 
+                                factionId, 
+                                units, 
+                                variantRules,
+                                hitStates,
+                                destroyedStates,
+                                depletedStates,
+                                damageStates
+                            },
+                            forceLibrary,
+                            unitLibrary
                         };
-                        localStorage.setItem('mac_attack_autosave', JSON.stringify(dataToSave));
+                        try {
+                            localStorage.setItem('mac_attack_autosave', JSON.stringify(dataToSave));
+                            setStorageError(false);
+                        } catch (error) {
+                            console.error("Storage error:", error);
+                            setStorageError(true);
+                        }
                     }
-                }, [forceName, factionId, units, variantRules, hitStates, destroyedStates, depletedStates, damageStates, isLoaded]);
-
+                }, [forceName, factionId, units, variantRules, hitStates, destroyedStates, depletedStates, damageStates, forceLibrary, unitLibrary, isLoaded]);
+                
                 const toggleHit = (unitId, modIndex) => {
                     setHitStates((prev) => {
                         const unitHits = prev[unitId] || {};
@@ -1436,11 +1572,17 @@
                     });
                 };
 
-                const toggleDestroyed = (unitId, modIndex) => {
+                const toggleDestroyed = (unitId, modIndex, isDouble) => {
                     setDestroyedStates((prev) => {
                         const unitDestroyed = prev[unitId] || {};
-                        const newDestroyed = !unitDestroyed[modIndex];
-                        return { ...prev, [unitId]: { ...unitDestroyed, [modIndex]: newDestroyed } };
+                        // Catch legacy boolean states from old saves
+                        let currentCount = unitDestroyed[modIndex];
+                        if (typeof currentCount === 'boolean') currentCount = currentCount ? 1 : 0;
+                        if (!currentCount) currentCount = 0;
+                        
+                        const maxCount = isDouble ? 2 : 1;
+                        const newCount = (currentCount + 1) % (maxCount + 1);
+                        return { ...prev, [unitId]: { ...unitDestroyed, [modIndex]: newCount } };
                     });
                 };
 
@@ -1525,6 +1667,7 @@
                                     type: value,
                                     assetName: defaultAsset,
                                     count: 1,
+                                    name: value === "REMOTE" ? defaultAsset : u.name,
                                 };
 
                                 // Do not reset modules if we only change between MAC classes
@@ -1540,6 +1683,10 @@
 
                             if (field === "pilot") return { ...u, pilot: { ...u.pilot, [nestedField]: value } };
                             if (field === "card") return { ...u, card: { ...u.card, [nestedField]: value } };
+
+                            if (field === "assetName") {
+                                return { ...u, assetName: value, name: value };
+                            }
 
                             if (field === "isMerc") {
                                 const isNowMerc = value;
@@ -1787,167 +1934,139 @@
                     }
                 };
 
-                const handleSave = () => {
-                    const data = JSON.stringify({ forceName, factionId, units, variantRules }, null, 2);
-                    const blob = new Blob([data], { type: "application/json" });
-                    const url = URL.createObjectURL(blob);
-                    const link = document.createElement("a");
-                    link.href = url;
-                    link.download = `${forceName.replace(/[^a-z0-9]/gi, "_").toLowerCase() || "force"}.json`;
-                    document.body.appendChild(link);
-                    link.click();
-                    document.body.removeChild(link);
-                    URL.revokeObjectURL(url);
-                };
-
-                const handleLoad = (event) => {
-                    const file = event.target.files[0];
-                    if (!file) return;
-                    const reader = new FileReader();
-                    reader.onload = (e) => {
-                        try {
-                            const data = JSON.parse(e.target.result);
-                            if (data.forceName) setForceName(data.forceName);
-                            if (data.factionId) setFactionId(data.factionId);
-
-                            let loadedUnits = [];
-                            if (data.units) loadedUnits = data.units.map(sanitizeUnit);
-
-                            // Backwards compatibility for old JSON saves using 'myAssets'
-                            if (data.myAssets && data.myAssets.length > 0) {
-                                data.myAssets.forEach((assetName, idx) => {
-                                    loadedUnits.push(
-                                        sanitizeUnit({
-                                            id: Date.now() + Math.random() + idx,
-                                            name: assetName,
-                                            type: "REMOTE",
-                                            assetName: assetName,
-                                            modules: [],
-                                            count: 1,
-                                        })
-                                    );
-                                });
-                            }
-                            setUnits(loadedUnits);
-
-                            if (data.variantRules) setVariantRules(data.variantRules);
-                            else {
-                                setVariantRules((prev) => ({
-                                    ...prev,
-                                    remoteAssets:
-                                        data.showRemoteAssets || (data.myAssets && data.myAssets.length > 0) || false,
-                                    doubleModules: data.showDoubleModules || false,
-                                }));
-                            }
-                        } catch (err) {
-                            alert("Invalid file format or corrupt file.");
+                const saveForceToLibrary = () => {
+                    const forceData = { 
+                        forceName, 
+                        factionId, 
+                        units, 
+                        variantRules, 
+                        hitStates, 
+                        destroyedStates, 
+                        depletedStates, 
+                        damageStates,
+                        timestamp: Date.now()
+                    };
+                    const existingIndex = forceLibrary.findIndex(f => f.forceName === forceName);
+                    
+                    if (existingIndex >= 0) {
+                        if (window.confirm(`Overwrite existing force "${forceName}" in the library?`)) {
+                            const newLib = [...forceLibrary];
+                            newLib[existingIndex] = forceData;
+                            setForceLibrary(newLib);
+                            alert(`Force "${forceName}" updated.`);
                         }
-                    };
-                    reader.readAsText(file);
-                    event.target.value = null;
+                    } else {
+                        setForceLibrary([...forceLibrary, forceData]);
+                        alert(`Force "${forceName}" saved to library.`);
+                    }
                 };
 
-                const exportUnit = (unit) => {
-                    const dataToExport = {
-                        macAttackExportType: "UNIT",
-                        unitData: unit,
+                const saveUnitToLibrary = (unit) => {
+                    const unitName = prompt("Enter a name for this saved unit:", unit.name);
+                    if (!unitName) return;
+                    
+                    const unitData = { ...unit, name: unitName, id: Date.now() + Math.random() };
+                    const existingIndex = unitLibrary.findIndex(u => u.name === unitName);
+                    
+                    if (existingIndex >= 0) {
+                        if (window.confirm(`Overwrite existing unit "${unitName}" in the library?`)) {
+                            const newLib = [...unitLibrary];
+                            newLib[existingIndex] = unitData;
+                            setUnitLibrary(newLib);
+                            alert(`Unit "${unitName}" updated.`);
+                        }
+                    } else {
+                        setUnitLibrary([...unitLibrary, unitData]);
+                        alert(`Unit "${unitName}" saved to library.`);
+                    }
+                };
+
+                const exportWorkspace = () => {
+                    const workspace = {
+                        macAttackWorkspace: true, // Retained for backwards compatibility with older save files
+                        activeForce: { forceName, factionId, units, variantRules, hitStates, destroyedStates, depletedStates, damageStates },
+                        forceLibrary,
+                        unitLibrary
                     };
-                    const data = JSON.stringify(dataToExport, null, 2);
-                    const blob = new Blob([data], { type: "application/json" });
+                    const blob = new Blob([JSON.stringify(workspace, null, 2)], { type: "application/json" });
                     const url = URL.createObjectURL(blob);
                     const link = document.createElement("a");
                     link.href = url;
-                    const safeName = (unit.name || "unit").replace(/[^a-z0-9]/gi, "_").toLowerCase();
-                    link.download = `${safeName}.json`;
-                    document.body.appendChild(link);
+                    link.download = `mac_attack_library_${new Date().toISOString().slice(0,10)}.json`;
                     link.click();
-                    document.body.removeChild(link);
-                    URL.revokeObjectURL(url);
                 };
 
-                const handleImportUnit = (event) => {
-                    const file = event.target.files[0];
+                const importWorkspace = (e) => {
+                    const file = e.target.files[0];
                     if (!file) return;
                     const reader = new FileReader();
                     reader.onload = (e) => {
                         try {
                             const data = JSON.parse(e.target.result);
-                            let importedUnit = null;
-
-                            if (data.macAttackExportType === "UNIT" && data.unitData) {
-                                importedUnit = data.unitData;
-                            } else if (data.type && UNIT_TYPES[data.type]) {
-                                // Fallback if uploading a raw unit JSON block
-                                importedUnit = data;
-                            }
-
-                            if (importedUnit) {
-                                setUnits((prevUnits) => {
-                                    const nextRank = getNextAvailableRank(prevUnits);
-                                    const globalSuit = getGlobalSuit(prevUnits);
-
-                                    const newUnit = sanitizeUnit({
-                                        ...importedUnit,
-                                        id: Date.now() + Math.random(),
-                                        card: { suit: globalSuit, rank: nextRank },
-                                    });
-                                    return [...prevUnits, newUnit];
-                                });
+                            if (data.macAttackWorkspace) {
+                                if (data.activeForce) {
+                                    setForceName(data.activeForce.forceName || "New Force");
+                                    setFactionId(data.activeForce.factionId || "NONE");
+                                    setVariantRules(data.activeForce.variantRules || { remoteAssets: false, hiredMercs: false, perksFlaws: false, pilots: false, doubleModules: false });
+                                    setUnits(data.activeForce.units ? data.activeForce.units.map(sanitizeUnit) : []);
+                                    setHitStates(data.activeForce.hitStates || {});
+                                    setDestroyedStates(data.activeForce.destroyedStates || {});
+                                    setDepletedStates(data.activeForce.depletedStates || {});
+                                    setDamageStates(data.activeForce.damageStates || {});
+                                }
+                                if (data.forceLibrary) setForceLibrary(data.forceLibrary);
+                                if (data.unitLibrary) setUnitLibrary(data.unitLibrary);
+                                alert("Library loaded successfully!");
                             } else {
-                                alert(
-                                    "Invalid unit file format. Please upload a file exported using the Unit Export button."
-                                );
+                                alert("Invalid library file. Please select a valid MAC Attack Library.");
                             }
-                        } catch (err) {
-                            alert("Invalid file format or corrupt file.");
+                        } catch(err) {
+                            alert("Error loading file.");
                         }
                     };
                     reader.readAsText(file);
-                    event.target.value = null;
+                    e.target.value = null;
                 };
 
-                const copyToClipboard = () => {
-                    let text = `**${forceName}** (${factionId !== "NONE" ? FACTIONS.find((f) => f.id === factionId).name : "No Faction"})\n`;
-                    text += `Total Points: ${totalCost}\n\n`;
-                    units.forEach((u) => {
-                        const count = u.count || 1;
-                        const typeInfo = UNIT_TYPES[u.type];
-                        text += `**${count > 1 ? count + "x " : ""}${u.name}**`;
-                        if (u.card && u.card.rank && u.card.suit) {
-                            const suit = SUITS.find((s) => s.name === u.card.suit);
-                            text += ` [${u.card.rank} of ${suit.symbol}]`;
+                const mergeWorkspace = (e) => {
+                    const file = e.target.files[0];
+                    if (!file) return;
+                    const reader = new FileReader();
+                    reader.onload = (event) => {
+                        try {
+                            const data = JSON.parse(event.target.result);
+                            if (data.macAttackWorkspace) {
+                                let forcesAdded = 0;
+                                let unitsAdded = 0;
+                                if (data.forceLibrary && data.forceLibrary.length > 0) {
+                                    setForceLibrary(prev => [...prev, ...data.forceLibrary]);
+                                    forcesAdded = data.forceLibrary.length;
+                                }
+                                if (data.unitLibrary && data.unitLibrary.length > 0) {
+                                    setUnitLibrary(prev => [...prev, ...data.unitLibrary]);
+                                    unitsAdded = data.unitLibrary.length;
+                                }
+                                alert(`Merged ${forcesAdded} forces and ${unitsAdded} units into your library.`);
+                            } else {
+                                alert("Invalid library file. Please select a valid MAC Attack Library.");
+                            }
+                        } catch(err) {
+                            alert("Error reading file.");
                         }
-                        if (typeInfo.type !== "ASSET") {
-                            text += ` [Div ${u.division || "A"}]`;
-                        }
-                        text += ` - ${typeInfo.name} (${calculateCost(u)}pts)\n`;
-
-                        if (typeInfo.type === "ASSET") {
-                            text += `   Asset: ${u.assetName}\n\n`;
-                            return;
-                        }
-
-                        if (variantRules.pilots && u.pilot?.name) text += `Pilot: ${u.pilot.name} (${u.pilot.type})\n`;
-                        let counter = 1;
-                        u.modules.forEach((m, i) => {
-                            let desc = "";
-                            if (m.category === "WEAPON") desc = `${generateWeaponCode(m)}`;
-                            else if (m.category === "BRAWL") desc = `Brawl: ${generateBrawlCode(m)}`;
-                            else if (m.category === "HW") desc = `HW: ${m.hwName}`;
-                            else desc = "[Empty]";
-
-                            if (m.isDouble) desc = `2x ${desc}`;
-                            if (m.customName) desc = `${m.customName} (${desc})`;
-
-                            let prefix = m.isSlot0 ? "O" : `${counter++}`;
-                            text += `   ${prefix}. ${desc}\n`;
-                        });
-                        text += "\n";
-                    });
-                    navigator.clipboard.writeText(text).then(() => alert("List copied to clipboard!"));
+                    };
+                    reader.readAsText(file);
+                    e.target.value = null;
                 };
 
-                const totalCost = units.reduce((sum, u) => sum + calculateCost(u), 0);
+                const handleWipeLibrary = () => {
+                    if (window.confirm("Are you sure you want to completely wipe your Library? This will delete all saved forces and units. This action cannot be undone.")) {
+                        setForceLibrary([]);
+                        setUnitLibrary([]);
+                        alert("Library has been completely wiped.");
+                    }
+                };
+
+                const totalCost = units.reduce((sum, u) => sum + calculateCost(u, variantRules.doubleModules), 0);
                 const selectedFaction = FACTIONS.find((f) => f.id === factionId) || FACTIONS[0];
 
                 // Force Level Validation
@@ -2028,6 +2147,120 @@
                     forceErrors.push(`The Commander must be in Division A (currently in Div ${commanderDiv}).`);
                 }
 
+                const renderForceLibraryModal = () => {
+                    if (!isForceLibraryOpen) return null;
+                    const sortedForces = [...forceLibrary].sort((a, b) => a.forceName.localeCompare(b.forceName));
+                    
+                    return (
+                        <div className="fixed inset-0 bg-slate-900 bg-opacity-50 flex items-center justify-center p-4 z-50 font-sans" onClick={() => setIsForceLibraryOpen(false)}>
+                            <div className="bg-white rounded shadow-lg max-w-2xl w-full p-6 text-sm overflow-y-auto max-h-[90vh]" onClick={e => e.stopPropagation()}>
+                                <h3 className="text-3xl font-niagara uppercase tracking-wide text-slate-800 mb-4 border-b pb-2">Force Library</h3>
+                                {sortedForces.length === 0 ? (
+                                    <div className="text-slate-500 italic py-4">No forces saved in library.</div>
+                                ) : (
+                                    <div className="flex flex-col gap-3">
+                                        {sortedForces.map((force, i) => {
+                                            const forceCost = force.units ? force.units.reduce((sum, u) => sum + calculateCost(u, force.variantRules?.doubleModules), 0) : 0;
+                                            return (
+                                            <div key={i} className="flex justify-between items-center bg-slate-50 p-3 rounded border border-slate-200">
+                                                <div>
+                                                    <div className="font-bold text-lg">{force.forceName}</div>
+                                                    <div className="text-slate-500 text-xs font-bold mt-1">
+                                                        {FACTIONS.find(f => f.id === force.factionId)?.name || 'No Faction'} <span className="text-slate-300 mx-1">|</span> {force.units ? force.units.length : 0} Units <span className="text-slate-300 mx-1">|</span> <span className="text-blue-600">{forceCost} PTS</span>
+                                                    </div>
+                                                </div>
+                                                <div className="flex gap-2">
+                                                    <button onClick={() => {
+                                                        if(window.confirm(`Load "${force.forceName}"? Current unsaved changes will be lost.`)) {
+                                                            setForceName(force.forceName);
+                                                            setFactionId(force.factionId);
+                                                            setVariantRules(force.variantRules || { remoteAssets: false, hiredMercs: false, perksFlaws: false, pilots: false, doubleModules: false });
+                                                            setUnits(force.units ? force.units.map(sanitizeUnit) : []);
+                                                            setHitStates(force.hitStates || {});
+                                                            setDestroyedStates(force.destroyedStates || {});
+                                                            setDepletedStates(force.depletedStates || {});
+                                                            setDamageStates(force.damageStates || {});
+                                                            setIsForceLibraryOpen(false);
+                                                        }
+                                                    }} className="bg-blue-600 text-white px-3 py-1.5 rounded hover:bg-blue-700 font-bold">Load</button>
+                                                    <button onClick={() => {
+                                                        if(window.confirm(`Delete "${force.forceName}" from library?`)) {
+                                                            setForceLibrary(forceLibrary.filter(f => f.forceName !== force.forceName));
+                                                        }
+                                                    }} className="bg-red-100 text-red-600 px-3 py-1.5 rounded hover:bg-red-200 font-bold">Delete</button>
+                                                </div>
+                                            </div>
+                                            );
+                                        })}
+                                    </div>
+                                )}
+                                <div className="mt-6 text-right">
+                                    <button onClick={() => setIsForceLibraryOpen(false)} className="bg-slate-200 text-slate-700 px-4 py-2 rounded hover:bg-slate-300 font-bold">Close</button>
+                                </div>
+                            </div>
+                        </div>
+                    );
+                };
+
+                const renderUnitLibraryModal = () => {
+                    if (!isUnitLibraryOpen) return null;
+                    const sortedUnits = [...unitLibrary].sort((a, b) => a.name.localeCompare(b.name));
+                    
+                    return (
+                        <div className="fixed inset-0 bg-slate-900 bg-opacity-50 flex items-center justify-center p-4 z-50 font-sans" onClick={() => setIsUnitLibraryOpen(false)}>
+                            <div className="bg-white rounded shadow-lg max-w-2xl w-full p-6 text-sm overflow-y-auto max-h-[90vh]" onClick={e => e.stopPropagation()}>
+                                <h3 className="text-3xl font-niagara uppercase tracking-wide text-slate-800 mb-4 border-b pb-2">Unit Library</h3>
+                                {sortedUnits.length === 0 ? (
+                                    <div className="text-slate-500 italic py-4">No units saved in library.</div>
+                                ) : (
+                                    <div className="flex flex-col gap-3">
+                                        {sortedUnits.map((unit, i) => (
+                                            <div key={i} className="flex justify-between items-center bg-slate-50 p-3 rounded border border-slate-200">
+                                                <div className="flex items-center gap-3">
+                                                    {unit.image ? (
+                                                        <img src={unit.image} className="w-12 h-12 object-cover rounded border border-slate-300" alt="Thumbnail" />
+                                                    ) : (
+                                                        <div className="w-12 h-12 bg-slate-200 rounded border border-slate-300 flex items-center justify-center text-slate-400 text-[9px] uppercase font-bold text-center leading-none">No<br/>Img</div>
+                                                    )}
+                                                    <div>
+                                                        <div className="font-bold text-lg">{unit.name}</div>
+                                                        <div className="text-slate-500 text-xs font-bold mt-1">
+                                                            {UNIT_TYPES[unit.type]?.name || 'Unknown Type'} <span className="text-slate-300 mx-1">|</span> <span className="text-blue-600">{calculateCost(unit, variantRules.doubleModules)} PTS</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div className="flex gap-2">
+                                                    <button onClick={() => {
+                                                        setUnits(prev => {
+                                                            const nextRank = getNextAvailableRank(prev);
+                                                            const globalSuit = getGlobalSuit(prev);
+                                                            const newUnit = sanitizeUnit({
+                                                                ...unit,
+                                                                id: Date.now() + Math.random(),
+                                                                card: { suit: globalSuit, rank: nextRank }
+                                                            });
+                                                            return [...prev, newUnit];
+                                                        });
+                                                        setIsUnitLibraryOpen(false);
+                                                    }} className="bg-emerald-600 text-white px-3 py-1.5 rounded hover:bg-emerald-700 font-bold">Add to Force</button>
+                                                    <button onClick={() => {
+                                                        if(window.confirm(`Delete "${unit.name}" from library?`)) {
+                                                            setUnitLibrary(unitLibrary.filter(u => u.name !== unit.name));
+                                                        }
+                                                    }} className="bg-red-100 text-red-600 px-3 py-1.5 rounded hover:bg-red-200 font-bold">Delete</button>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                                <div className="mt-6 text-right">
+                                    <button onClick={() => setIsUnitLibraryOpen(false)} className="bg-slate-200 text-slate-700 px-4 py-2 rounded hover:bg-slate-300 font-bold">Close</button>
+                                </div>
+                            </div>
+                        </div>
+                    );
+                };
+
                 if (isPrintMode) {
                     return (
                         <div className="bg-white min-h-screen p-8 font-sans text-black">
@@ -2074,7 +2307,7 @@
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start font-sans">
                                 {units.map((u, idx) => {
-                                    const cost = calculateCost(u);
+                                    const cost = calculateCost(u, variantRules.doubleModules);
                                     const typeInfo = UNIT_TYPES[u.type];
                                     const isMac = typeInfo.type === "MAC";
                                     const isAsset = typeInfo.type === "ASSET";
@@ -2134,22 +2367,26 @@
                                                     <tbody>
                                                         {modulesToRender.map((mod, i) => {
                                                             let code = "";
-                                                            let notes = getModuleRule(mod);
+                                                            let notes = getModuleRule(mod, variantRules.doubleModules);
 
                                                             if (mod.category === "WEAPON")
-                                                                code = generateWeaponCode(mod);
+                                                                code = generateWeaponCode(mod, variantRules.doubleModules);
                                                             else if (mod.category === "BRAWL") {
-                                                                code = generateBrawlCode(mod);
-                                                            } else if (mod.category === "HW")
+                                                                code = generateBrawlCode(mod, variantRules.doubleModules);
+                                                            } else if (mod.category === "HW") {
                                                                 code = mod.hwName;
-                                                            else {
+                                                                if (variantRules.doubleModules && mod.isDouble) code = `2x ${code}`;
+                                                            } else {
                                                                 code = "";
                                                                 notes = "";
                                                             }
 
-                                                            if (mod.isDouble) code = `2x ${code}`;
+                                                            const isDoubleActive = variantRules.doubleModules && mod.isDouble;
                                                             const isHit = hitStates[u.id]?.[i];
-                                                            const isDestroyed = destroyedStates[u.id]?.[i];
+                                                            
+                                                            let destroyedVal = destroyedStates[u.id]?.[i];
+                                                            const destroyedCount = typeof destroyedVal === 'boolean' ? (destroyedVal ? 1 : 0) : (destroyedVal || 0);
+                                                            
                                                             const isExpendable = mod.expendable;
                                                             const depletedCount =
                                                                 depletedStates[u.id]?.[i] || 0;
@@ -2197,11 +2434,18 @@
                                                                     {isMac && (
                                                                         <td
                                                                             className="p-2 text-center align-middle cursor-pointer hover:bg-gray-50"
-                                                                            onClick={() => toggleDestroyed(u.id, i)}
+                                                                            onClick={() => toggleDestroyed(u.id, i, isDoubleActive)}
                                                                         >
-                                                                            <div
-                                                                                className={`w-4 h-4 border-2 border-gray-400 rounded-sm mx-auto ${isDestroyed ? "bg-red-600 border-red-600" : "bg-white"}`}
-                                                                            ></div>
+                                                                            <div className="flex gap-1 justify-center">
+                                                                                <div
+                                                                                    className={`w-4 h-4 border-2 border-gray-400 rounded-sm ${destroyedCount >= 1 ? "bg-red-600 border-red-600" : "bg-white"}`}
+                                                                                ></div>
+                                                                                {isDoubleActive && (
+                                                                                    <div
+                                                                                        className={`w-4 h-4 border-2 border-gray-400 rounded-sm ${destroyedCount >= 2 ? "bg-red-600 border-red-600" : "bg-white"}`}
+                                                                                    ></div>
+                                                                                )}
+                                                                            </div>
                                                                         </td>
                                                                     )}
                                                                     <td
@@ -2211,7 +2455,7 @@
                                                                             toggleDepleted(
                                                                                 u.id,
                                                                                 i,
-                                                                                mod.isDouble
+                                                                                isDoubleActive
                                                                             )
                                                                         }
                                                                     >
@@ -2220,7 +2464,7 @@
                                                                                 <div
                                                                                     className={`w-3 h-3 border-2 border-amber-500 rounded-sm ${depletedCount >= 1 ? "bg-amber-500" : "bg-white"}`}
                                                                                 ></div>
-                                                                                {mod.isDouble && (
+                                                                                {isDoubleActive && (
                                                                                     <div
                                                                                         className={`w-3 h-3 border-2 border-amber-500 rounded-sm ${depletedCount >= 2 ? "bg-amber-500" : "bg-white"}`}
                                                                                     ></div>
@@ -2272,7 +2516,11 @@
                                                         </span>
                                                     )}
                                                     {u.pilot?.isCommander && (
-                                                        <span className="font-bold text-xs bg-black text-white px-2 py-0.5 rounded uppercase">
+                                                        <span className="font-bold text-xs bg-black text-amber-400 px-2 py-0.5 rounded uppercase flex items-center gap-1 border border-amber-400 shadow-sm">
+                                                            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                                                                <polyline points="17 11 12 6 7 11"></polyline>
+                                                                <polyline points="17 18 12 13 7 18"></polyline>
+                                                            </svg>
                                                             Cmdr
                                                         </span>
                                                     )}
@@ -2384,7 +2632,7 @@
                                                     <div className="flex w-full">
                                                         {u.isMerc && variantRules.hiredMercs && u.variantModules ? (
                                                             <div className="flex flex-col gap-0 w-full">
-                                                                {renderTable(u.modules, "Variant 1")}
+                                                                {renderTable(u.modules, "Variant 1 (Primary)")}
                                                                 {renderTable(u.variantModules, "Variant 2")}
                                                             </div>
                                                         ) : (
@@ -2415,10 +2663,19 @@
                     );
                 }
 
-                return (
+               return (
                     <div className="bg-slate-100 min-h-screen p-4 sm:p-6 font-sans">
-                        <div className="max-w-5xl mx-auto bg-white p-4 rounded-lg shadow-sm border border-slate-200 sticky top-4 z-20 mb-8">
-                            <div className="flex flex-wrap gap-4 mb-4 p-3 bg-slate-100 border border-slate-200 rounded text-xs font-bold text-slate-600 uppercase tracking-wider">
+                        <div className="max-w-5xl mx-auto sticky top-4 z-30 flex flex-col gap-4 mb-8 pointer-events-none">
+                            {storageError && (
+                                <div className="bg-red-100 text-red-700 p-3 rounded-lg border border-red-300 shadow-sm flex items-center justify-between font-sans pointer-events-auto">
+                                    <div className="flex items-center gap-2">
+                                        <IconAlert />
+                                        <span className="text-sm font-bold">Storage Limit Reached: Your browser's memory is full (likely due to images). Current changes will not autosave on page refresh.</span>
+                                    </div>
+                                    <button onClick={() => setStorageError(false)} className="text-red-500 hover:text-red-800 font-bold px-2 text-xl leading-none">&times;</button>
+                                </div>
+                            )}
+                            <div className="bg-white p-4 rounded-lg shadow-sm border border-slate-200 pointer-events-auto">                            <div className="flex flex-wrap gap-4 mb-4 p-3 bg-slate-100 border border-slate-200 rounded text-xs font-bold text-slate-600 uppercase tracking-wider">
                                 <span className="text-slate-400 mr-2 self-center">Options:</span>
                                 <label className="flex items-center gap-2 cursor-pointer hover:text-blue-600 transition-colors">
                                     <input
@@ -2529,25 +2786,37 @@
                                     <button onClick={handleNewForce} className={BTN_TOOL_CLASS} title="New Force">
                                         <IconFilePlus />
                                     </button>
-                                    <button onClick={copyToClipboard} className={BTN_TOOL_CLASS} title="Copy Text">
-                                        <IconClipboard />
-                                    </button>
-                                    <button onClick={handleSave} className={BTN_TOOL_CLASS} title="Save Force">
+                                    <button onClick={saveForceToLibrary} className={BTN_TOOL_CLASS} title="Save Force to Library">
                                         <IconSave />
+                                    </button>
+                                    <button onClick={() => setIsForceLibraryOpen(true)} className={BTN_TOOL_CLASS} title="Open Force Library">
+                                        <IconDatabase />
+                                    </button>
+                                    <button onClick={exportWorkspace} className={BTN_TOOL_CLASS} title="Export Library">
+                                        <IconDownload />
                                     </button>
                                     <input
                                         type="file"
-                                        ref={fileInputRef}
-                                        onChange={handleLoad}
+                                        ref={importWorkspaceRef}
+                                        onChange={importWorkspace}
                                         accept=".json"
                                         className="hidden"
                                     />
-                                    <button
-                                        onClick={() => fileInputRef.current.click()}
-                                        className={BTN_TOOL_CLASS}
-                                        title="Load Force"
-                                    >
-                                        <IconLoad />
+                                    <button onClick={() => importWorkspaceRef.current.click()} className={BTN_TOOL_CLASS} title="Import Library (Overwrite)">
+                                        <IconUpload />
+                                    </button>
+                                    <input
+                                        type="file"
+                                        ref={mergeWorkspaceRef}
+                                        onChange={mergeWorkspace}
+                                        accept=".json"
+                                        className="hidden"
+                                    />
+                                    <button onClick={() => mergeWorkspaceRef.current.click()} className={BTN_TOOL_CLASS} title="Merge Library (Add)">
+                                        <IconMerge />
+                                    </button>
+                                    <button onClick={handleWipeLibrary} className={`${BTN_TOOL_CLASS} hover:!bg-red-50 hover:!text-red-600 hover:!border-red-200`} title="Wipe Library">
+                                        <IconDatabaseWipe />
                                     </button>
                                     <button
                                         onClick={() => setIsPrintMode(true)}
@@ -2571,29 +2840,30 @@
                                     <span>{selectedFaction.rule}</span>
                                 </div>
                             )}
-                        </div>
-
-                        {forceErrors.length > 0 && (
-                            <div className="max-w-5xl mx-auto mb-6 bg-red-50 text-red-700 p-4 rounded-lg border border-red-200 shadow-sm flex items-start gap-3 font-sans">
-                                <IconInfo />
-                                <div>
-                                    <h4 className="font-bold text-sm uppercase tracking-wide mb-1">
-                                        Force Building Warnings
-                                    </h4>
-                                    <ul className="list-disc list-inside text-sm">
-                                        {forceErrors.map((err, i) => (
-                                            <li key={i}>{err}</li>
-                                        ))}
-                                    </ul>
-                                </div>
                             </div>
-                        )}
+
+                            {forceErrors.length > 0 && (
+                                <div className="bg-red-50 text-red-700 p-4 rounded-lg border border-red-200 shadow-sm flex items-start gap-3 font-sans pointer-events-auto max-h-48 overflow-y-auto">
+                                    <IconInfo />
+                                    <div>
+                                        <h4 className="font-bold text-sm uppercase tracking-wide mb-1">
+                                            Force Building Warnings
+                                        </h4>
+                                        <ul className="list-disc list-inside text-sm">
+                                            {forceErrors.map((err, i) => (
+                                                <li key={i}>{err}</li>
+                                            ))}
+                                        </ul>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
 
                         <div className="max-w-5xl mx-auto grid gap-6 font-sans">
                             {units.map((unit, unitIndex) => {
                                 const typeInfo = UNIT_TYPES[unit.type];
                                 if (!typeInfo) return null;
-                                const cost = calculateCost(unit);
+                                const cost = calculateCost(unit, variantRules.doubleModules);
                                 const errors = checkValidation(unit, variantRules);
 
                                 const isMac = typeInfo.type === "MAC";
@@ -3054,9 +3324,9 @@
                                                 </button>
                                             </div>
                                             <button
-                                                onClick={() => exportUnit(unit)}
+                                                onClick={() => saveUnitToLibrary(unit)}
                                                 className={BTN_FOOTER_CLASS}
-                                                title="Export Single Unit"
+                                                title="Save Unit to Library"
                                             >
                                                 <IconSave size={18} />
                                             </button>
@@ -3086,19 +3356,12 @@
                                 >
                                     <IconPlus size={24} /> Add New Unit
                                 </button>
-
-                                <input
-                                    type="file"
-                                    ref={importUnitRef}
-                                    onChange={handleImportUnit}
-                                    accept=".json"
-                                    className="hidden"
-                                />
+                                
                                 <button
-                                    onClick={() => importUnitRef.current.click()}
+                                    onClick={() => setIsUnitLibraryOpen(true)}
                                     className="bg-white border-2 border-slate-300 text-slate-700 py-4 rounded-lg shadow-sm hover:bg-slate-50 flex justify-center items-center gap-2 font-bold text-lg transition-all"
                                 >
-                                    <IconLoad size={24} /> Import Saved Unit
+                                    <IconDatabase size={24} /> Load Unit from Library
                                 </button>
                             </div>
 
@@ -3108,13 +3371,16 @@
                             </div>
                         </div>
 
+                        {renderForceLibraryModal()}
+                        {renderUnitLibraryModal()}
+
                         {showHelp && (
                             <div
                                 className="fixed inset-0 bg-slate-900 bg-opacity-50 flex items-center justify-center p-4 z-50 no-print font-sans"
                                 onClick={() => setShowHelp(false)}
                             >
                                 <div
-                                    className="bg-white rounded shadow-lg max-w-lg w-full p-6 text-sm overflow-y-auto max-h-[90vh]"
+                                    className="bg-white rounded shadow-lg max-w-2xl w-full p-6 text-sm overflow-y-auto max-h-[90vh]"
                                     onClick={(e) => e.stopPropagation()}
                                 >
                                     <div className="flex justify-between items-center mb-4">
@@ -3148,6 +3414,51 @@
                                                 This is an unofficial, community-built tool created to support the game.
                                             </p>
                                         </div>
+
+                                        <details className="border border-slate-200 rounded-lg bg-slate-50 overflow-hidden group">
+                                            <summary className="cursor-pointer bg-slate-100 px-4 py-3 font-bold text-slate-700 hover:bg-slate-200 transition-colors flex items-center justify-between outline-none">
+                                                <span className="flex items-center gap-2"><IconDatabase /> Library & Workspace Guide</span>
+                                                <span className="group-open:rotate-180 transition-transform duration-200">
+                                                    <IconArrowDown />
+                                                </span>
+                                            </summary>
+                                            <div className="p-4 bg-white text-slate-600 space-y-6 max-h-[50vh] overflow-y-auto">
+                                                <section>
+                                                    <h5 className="font-bold text-base text-slate-800 border-b border-slate-200 pb-1 mb-2">1. The Local Library</h5>
+                                                    <p className="mb-2">Your browser automatically maintains a continuous "Workspace" in the background. As long as you have memory space, everything you do is auto-saved.</p>
+                                                    <ul className="space-y-2 list-disc pl-5">
+                                                        <li><strong>Saving Forces:</strong> Click the <span className="inline-flex items-center align-middle text-slate-500 bg-white p-1 rounded border border-slate-200 mx-1"><IconSave size={14} /></span> icon to write your current active roster into the database. Overwrite prompts will prevent accidental erasure.</li>
+                                                        <li><strong>Saving Units:</strong> In the footer of any unit card, click the <span className="inline-flex items-center align-middle text-slate-500 bg-white p-1 rounded border border-slate-200 mx-1"><IconSave size={14} /></span> icon to save that specific unit into the library for future lists.</li>
+                                                        <li><strong>Loading Data:</strong> Click the <span className="inline-flex items-center align-middle text-slate-500 bg-white p-1 rounded border border-slate-200 mx-1"><IconDatabase /></span> icons in the main menu or the bottom of the unit list to bring up your saved templates.</li>
+                                                    </ul>
+                                                </section>
+
+                                                <section>
+                                                    <h5 className="font-bold text-base text-slate-800 border-b border-slate-200 pb-1 mb-2">2. Export, Import, & Merging</h5>
+                                                    <p className="mb-2">Clearing your browser cache or switching devices will wipe your data. To secure your rosters, use the file management tools.</p>
+                                                    <ul className="space-y-2 list-disc pl-5">
+                                                        <li><strong>Export Library:</strong> Click the <span className="inline-flex items-center align-middle text-slate-500 bg-white p-1 rounded border border-slate-200 mx-1"><IconDownload size={14} /></span> icon to download your active force and entire library as a master backup file.</li>
+                                                        <li><strong>Import Library:</strong> Click the <span className="inline-flex items-center align-middle text-slate-500 bg-white p-1 rounded border border-slate-200 mx-1"><IconUpload size={14} /></span> icon to load a file. <strong>Warning:</strong> This will completely overwrite your current browser library.</li>
+                                                        <li><strong>Merge Library:</strong> Click the <span className="inline-flex items-center align-middle text-slate-500 bg-white p-1 rounded border border-slate-200 mx-1"><IconMerge size={14} /></span> icon to merge forces and units from another file into your current library.</li>
+                                                    </ul>
+                                                </section>
+
+                                                <section>
+                                                    <h5 className="font-bold text-base text-slate-800 border-b border-slate-200 pb-1 mb-2">3. Storage Limits</h5>
+                                                    <p className="mb-2">Browsers place a strict 5MB limit on local app data. Text is light, but images are heavy. The Grill auto-compresses portraits, but too many will fill the vault.</p>
+                                                    <ul className="space-y-2 list-disc pl-5">
+                                                        <li><strong>The Warning Banner:</strong> If you hit the ceiling, a red banner with the <span className="inline-flex items-center align-middle text-red-600 bg-red-50 p-1 rounded border border-red-200 mx-1"><IconAlert /></span> icon will appear. <strong>Auto-saving is disabled when this is visible.</strong></li>
+                                                        <li><strong>How to Fix It:</strong> Free up memory by deleting outdated rosters or lists with heavy images from your libraries.</li>
+                                                        <li><strong>Failsafe Saving:</strong> If you cannot delete anything, click the <span className="inline-flex items-center align-middle text-slate-500 bg-white p-1 rounded border border-slate-200 mx-1"><IconDownload size={14} /></span> icon to bypass the browser memory and download your data to your hard drive.</li>
+                                                    </ul>
+                                                </section>
+
+                                                <section>
+                                                    <h5 className="font-bold text-base text-slate-800 border-b border-slate-200 pb-1 mb-2">4. Wiping the Database</h5>
+                                                    <p>Click the <span className="inline-flex items-center align-middle text-slate-500 bg-white p-1 rounded border border-slate-200 mx-1"><IconDatabaseWipe size={14} /></span> icon to permanently delete all saved forces and units from your browser's memory. Always Export your library first!</p>
+                                                </section>
+                                            </div>
+                                        </details>
                                     </div>
 
                                     <div className="text-center mt-6">
