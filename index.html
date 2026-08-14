@@ -1478,6 +1478,7 @@
                 const [unitLibrary, setUnitLibrary] = useState([]);
                 const [isForceLibraryOpen, setIsForceLibraryOpen] = useState(false);
                 const [isUnitLibraryOpen, setIsUnitLibraryOpen] = useState(false);
+                const [selectedLibraryUnitIds, setSelectedLibraryUnitIds] = useState([]);
                 const [isLoaded, setIsLoaded] = useState(false);
                 const [storageError, setStorageError] = useState(false);
 
@@ -2208,18 +2209,60 @@
                 const renderUnitLibraryModal = () => {
                     if (!isUnitLibraryOpen) return null;
                     const sortedUnits = [...unitLibrary].sort((a, b) => a.name.localeCompare(b.name));
-                    
+
+                    const handleToggleSelect = (unitId) => {
+                        setSelectedLibraryUnitIds(prev => prev.includes(unitId) ? prev.filter(id => id !== unitId) : [...prev, unitId]);
+                    };
+
+                    const handleAddSelected = () => {
+                        const unitsToAdd = unitLibrary.filter(u => selectedLibraryUnitIds.includes(u.id));
+                        if (unitsToAdd.length === 0) return;
+
+                        setUnits(prev => {
+                            let newUnits = [...prev];
+                            unitsToAdd.forEach(unit => {
+                                const nextRank = getNextAvailableRank(newUnits);
+                                const globalSuit = getGlobalSuit(newUnits);
+                                newUnits.push(sanitizeUnit({
+                                    ...unit,
+                                    id: Date.now() + Math.random(),
+                                    card: { suit: globalSuit, rank: nextRank }
+                                }));
+                            });
+                            return newUnits;
+                        });
+                        setSelectedLibraryUnitIds([]);
+                        setIsUnitLibraryOpen(false);
+                    };
+
                     return (
-                        <div className="fixed inset-0 bg-slate-900 bg-opacity-50 flex items-center justify-center p-4 z-50 font-sans" onClick={() => setIsUnitLibraryOpen(false)}>
-                            <div className="bg-white rounded shadow-lg max-w-2xl w-full p-6 text-sm overflow-y-auto max-h-[90vh]" onClick={e => e.stopPropagation()}>
-                                <h3 className="text-3xl font-niagara uppercase tracking-wide text-slate-800 mb-4 border-b pb-2">Unit Library</h3>
+                        <div className="fixed inset-0 bg-slate-900 bg-opacity-50 flex items-center justify-center p-4 z-50 font-sans" onClick={() => { setIsUnitLibraryOpen(false); setSelectedLibraryUnitIds([]); }}>
+                            <div className="bg-white rounded shadow-lg max-w-2xl w-full p-6 text-sm flex flex-col max-h-[90vh]" onClick={e => e.stopPropagation()}>
+                                <div className="flex justify-between items-center mb-4 border-b pb-2 shrink-0">
+                                    <h3 className="text-3xl font-niagara uppercase tracking-wide text-slate-800">Unit Library</h3>
+                                    {selectedLibraryUnitIds.length > 0 && (
+                                        <span className="bg-blue-100 text-blue-800 font-bold px-3 py-1 rounded text-xs">
+                                            {selectedLibraryUnitIds.length} Selected
+                                        </span>
+                                    )}
+                                </div>
+                                <div className="overflow-y-auto grow pr-2">
                                 {sortedUnits.length === 0 ? (
                                     <div className="text-slate-500 italic py-4">No units saved in library.</div>
                                 ) : (
                                     <div className="flex flex-col gap-3">
-                                        {sortedUnits.map((unit, i) => (
-                                            <div key={i} className="flex justify-between items-center bg-slate-50 p-3 rounded border border-slate-200">
+                                        {sortedUnits.map((unit, i) => {
+                                            const isSelected = selectedLibraryUnitIds.includes(unit.id);
+                                            return (
+                                            <div
+                                                key={i}
+                                                onClick={() => handleToggleSelect(unit.id)}
+                                                className={`flex justify-between items-center p-3 rounded border cursor-pointer transition-colors ${isSelected ? 'bg-blue-50 border-blue-300 ring-1 ring-blue-300' : 'bg-slate-50 border-slate-200 hover:border-blue-300'}`}
+                                            >
                                                 <div className="flex items-center gap-3">
+                                                    <div className="flex items-center justify-center mr-2">
+                                                        <input type="checkbox" checked={isSelected} readOnly className="w-5 h-5 accent-blue-600 pointer-events-none" />
+                                                    </div>
                                                     {unit.image ? (
                                                         <img src={unit.image} className="w-12 h-12 object-cover rounded border border-slate-300" alt="Thumbnail" />
                                                     ) : (
@@ -2233,31 +2276,29 @@
                                                     </div>
                                                 </div>
                                                 <div className="flex gap-2">
-                                                    <button onClick={() => {
-                                                        setUnits(prev => {
-                                                            const nextRank = getNextAvailableRank(prev);
-                                                            const globalSuit = getGlobalSuit(prev);
-                                                            const newUnit = sanitizeUnit({
-                                                                ...unit,
-                                                                id: Date.now() + Math.random(),
-                                                                card: { suit: globalSuit, rank: nextRank }
-                                                            });
-                                                            return [...prev, newUnit];
-                                                        });
-                                                        setIsUnitLibraryOpen(false);
-                                                    }} className="bg-emerald-600 text-white px-3 py-1.5 rounded hover:bg-emerald-700 font-bold">Add to Force</button>
-                                                    <button onClick={() => {
+                                                    <button onClick={(e) => {
+                                                        e.stopPropagation();
                                                         if(window.confirm(`Delete "${unit.name}" from library?`)) {
-                                                            setUnitLibrary(unitLibrary.filter(u => u.name !== unit.name));
+                                                            setUnitLibrary(unitLibrary.filter(u => u.id !== unit.id));
+                                                            setSelectedLibraryUnitIds(prev => prev.filter(id => id !== unit.id));
                                                         }
                                                     }} className="bg-red-100 text-red-600 px-3 py-1.5 rounded hover:bg-red-200 font-bold">Delete</button>
                                                 </div>
                                             </div>
-                                        ))}
+                                            );
+                                        })}
                                     </div>
                                 )}
-                                <div className="mt-6 text-right">
-                                    <button onClick={() => setIsUnitLibraryOpen(false)} className="bg-slate-200 text-slate-700 px-4 py-2 rounded hover:bg-slate-300 font-bold">Close</button>
+                                </div>
+                                <div className="mt-4 pt-4 border-t flex justify-between items-center shrink-0">
+                                    <button onClick={() => { setIsUnitLibraryOpen(false); setSelectedLibraryUnitIds([]); }} className="bg-slate-200 text-slate-700 px-4 py-2 rounded hover:bg-slate-300 font-bold">Cancel</button>
+                                    <button
+                                        onClick={handleAddSelected}
+                                        disabled={selectedLibraryUnitIds.length === 0}
+                                        className="bg-emerald-600 text-white px-6 py-2 rounded hover:bg-emerald-700 font-bold disabled:opacity-50 disabled:cursor-not-allowed"
+                                    >
+                                        Add Selected to Force
+                                    </button>
                                 </div>
                             </div>
                         </div>
