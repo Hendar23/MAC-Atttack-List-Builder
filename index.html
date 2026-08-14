@@ -1262,27 +1262,29 @@
                         </select>
 
                         <div className="flex-grow w-full lg:w-auto flex flex-col gap-1 font-sans">
-                            {(module.category === "WEAPON" || module.category === "BRAWL") && (
+                            {(module.category === "WEAPON" || module.category === "BRAWL" || module.category === "HW") && (
                                 <div className="flex gap-2 mb-1 w-full">
                                     <input
                                         type="text"
                                         className="p-1 border rounded flex-grow text-sm placeholder-slate-400 font-sans"
-                                        placeholder="Weapon Name (Optional)"
+                                        placeholder={module.category === "HW" ? "Hardware Name (Optional)" : "Weapon Name (Optional)"}
                                         value={module.customName || ""}
                                         onChange={(e) => onChange(index, { ...module, customName: e.target.value })}
                                     />
-                                    <input
-                                        type="text"
-                                        className={`p-1 border rounded w-1/3 min-w-[120px] text-sm placeholder-slate-400 font-sans transition-colors ${parseError ? "border-red-500 bg-red-50 text-red-700 outline-red-500" : "border-slate-200"}`}
-                                        placeholder="Code (e.g. SP2-TX)"
-                                        value={parseInput}
-                                        onChange={(e) => {
-                                            setParseInput(e.target.value);
-                                            setParseError(false);
-                                        }}
-                                        onKeyDown={handleParse}
-                                        title="Type weapon code and press Enter"
-                                    />
+                                    {(module.category === "WEAPON" || module.category === "BRAWL") && (
+                                        <input
+                                            type="text"
+                                            className={`p-1 border rounded w-1/3 min-w-[120px] text-sm placeholder-slate-400 font-sans transition-colors ${parseError ? "border-red-500 bg-red-50 text-red-700 outline-red-500" : "border-slate-200"}`}
+                                            placeholder="Code (e.g. SP2-TX)"
+                                            value={parseInput}
+                                            onChange={(e) => {
+                                                setParseInput(e.target.value);
+                                                setParseError(false);
+                                            }}
+                                            onKeyDown={handleParse}
+                                            title="Type weapon code and press Enter"
+                                        />
+                                    )}
                                 </div>
                             )}
 
@@ -1488,6 +1490,7 @@
                     perksFlaws: false,
                     pilots: false,
                     doubleModules: false,
+                    hideWarnings: false,
                 });
 
                 const importWorkspaceRef = useRef(null);
@@ -1502,7 +1505,7 @@
                                 setForceName(data.activeForce.forceName || "New Force");
                                 setFactionId(data.activeForce.factionId || "NONE");
                                 setVariantRules(data.activeForce.variantRules || {
-                                    remoteAssets: false, hiredMercs: false, perksFlaws: false, pilots: false, doubleModules: false
+                                    remoteAssets: false, hiredMercs: false, perksFlaws: false, pilots: false, doubleModules: false, hideWarnings: false
                                 });
                                 setHitStates(data.activeForce.hitStates || {});
                                 setDestroyedStates(data.activeForce.destroyedStates || {});
@@ -2722,6 +2725,16 @@
                                     />
                                     Double Modules
                                 </label>
+                                <div className="w-px h-4 bg-slate-300 mx-1 hidden sm:block"></div>
+                                <label className="flex items-center gap-2 cursor-pointer text-red-500 hover:text-red-700 transition-colors">
+                                    <input
+                                        type="checkbox"
+                                        className="accent-red-600 w-4 h-4"
+                                        checked={variantRules.hideWarnings || false}
+                                        onChange={() => toggleVariantRule("hideWarnings")}
+                                    />
+                                    Hide Warnings
+                                </label>
                             </div>
 
                             <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
@@ -2842,7 +2855,7 @@
                             )}
                             </div>
 
-                            {forceErrors.length > 0 && (
+                            {!variantRules.hideWarnings && forceErrors.length > 0 && (
                                 <div className="bg-red-50 text-red-700 p-4 rounded-lg border border-red-200 shadow-sm flex items-start gap-3 font-sans pointer-events-auto max-h-48 overflow-y-auto">
                                     <IconInfo />
                                     <div>
@@ -3186,7 +3199,7 @@
                                                 </div>
                                             )}
 
-                                        {errors.length > 0 && (
+                                        {!variantRules.hideWarnings && errors.length > 0 && (
                                             <div className="bg-red-50 text-red-600 p-3 text-sm flex items-center gap-2 border-b border-red-100 font-sans">
                                                 <IconAlert />
                                                 <div className="flex flex-col">
