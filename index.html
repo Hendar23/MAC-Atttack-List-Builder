@@ -1753,19 +1753,15 @@
                             if (sourceMod.isSlot0) return u;
 
                             const newModules = [...targetArray];
-                            if (UNIT_TYPES[u.type].type === "AU") {
-                                return isVariant ? { ...u, variantModules: [...newModules, { ...sourceMod }] } : { ...u, modules: [...newModules, { ...sourceMod }] };
+                            
+                            if (UNIT_TYPES[u.type].type === "AU" && sourceIndex + 1 === newModules.length) {
+                                // AUs dynamically add slots if cloning the bottom item
+                                newModules.push({ ...sourceMod, isSlot0: false });
+                            } else if (sourceIndex + 1 < newModules.length) {
+                                // Strictly overwrite the module immediately below
+                                newModules[sourceIndex + 1] = { ...sourceMod, isSlot0: false };
                             }
-                            for (let i = 0; i < newModules.length; i++) {
-                                if (
-                                    i !== sourceIndex &&
-                                    !newModules[i].isSlot0 &&
-                                    (newModules[i].category === "EMPTY" || newModules[i].hwName === "Frame")
-                                ) {
-                                    newModules[i] = { ...sourceMod, isSlot0: false };
-                                    break;
-                                }
-                            }
+                            
                             return isVariant ? { ...u, variantModules: newModules } : { ...u, modules: newModules };
                         })
                     );
